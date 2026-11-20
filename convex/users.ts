@@ -1,5 +1,4 @@
-import { internalQuery, query } from "./_generated/server";
-import { v } from "convex/values";
+import { query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { currentUser } from "./auth";
 
@@ -12,10 +11,4 @@ export const me = query({
     const user = await currentUser(ctx);
     return user ? { allowed: true as const, id: user._id, email: user.email ?? "" } : { allowed: false as const };
   },
-});
-
-export const idByEmail = internalQuery({
-  args: { email: v.string() },
-  handler: async (ctx, { email }) =>
-    (await ctx.db.query("users").withIndex("email", (q) => q.eq("email", email)).first())?._id ?? null,
 });

@@ -14,7 +14,8 @@ if (!url) {
   const convex = new ConvexReactClient(url);
   root.render(
     <StrictMode>
-      <ConvexAuthProvider client={convex}>
+      {/* SignIn handles ?code= itself so it can show "not on the access list". */}
+      <ConvexAuthProvider client={convex} shouldHandleCode={false}>
         <App />
       </ConvexAuthProvider>
     </StrictMode>,

@@ -40,8 +40,9 @@ Live: https://atulpatildbz.github.io/chessfsrs
   that plays the last move is the solver (`1... Kg7 2. Nd5 Rh8 3. Bxf6+ Qxf6 4. Nxf6` from a
   black-to-move FEN → you play White and Kg7 is played for you); a Switch button flips it. A bare
   FEN line followed by moves works too.
-- **Access**: Convex Auth with email + password. Only emails on the `allowedEmails` table can
-  get a session.
+- **Access**: Google sign-in through Convex Auth, the same setup as Habitool and ebook-reader.
+  Anyone can complete the Google step, but only emails on the `allowedEmails` table get a session;
+  everyone else sees "That Google account isn't on the access list."
 
 ## What is deployed where
 
@@ -53,9 +54,20 @@ Live: https://atulpatildbz.github.io/chessfsrs
 
 The Pages and APK builds read the backend URL from the repository variable `CONVEX_URL`.
 
-Deployment environment variables (each deployment has its own): `SITE_URL` (prod: the Pages URL;
-dev: `http://localhost:5173`), and `JWT_PRIVATE_KEY` / `JWKS` from
-`node scripts/convex-keys.mjs [--prod]`.
+Deployment environment variables (each deployment has its own):
+
+- `SITE_URL`: prod the Pages URL, dev `http://localhost:5173`. Google sends web sign-ins back here.
+- `JWT_PRIVATE_KEY` / `JWKS`: from `node scripts/convex-keys.mjs [--prod]`.
+- `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET`: the OAuth client shared with Habitool (Google Cloud
+  project "first"), copied without printing them:
+
+      for k in AUTH_GOOGLE_ID AUTH_GOOGLE_SECRET; do npx convex env set --prod $k -- "$(cd ../Habitool && npx convex env get --prod $k)"; done
+
+  That client's **Authorised redirect URIs** must list each deployment's callback:
+  `https://quiet-eel-61.convex.site/api/auth/callback/google` (prod) and
+  `https://reliable-hyena-673.convex.site/api/auth/callback/google` (dev).
+- `ENABLE_PASSWORD_LOGIN=true`: dev only. Turns on email + password for `@chessfsrs.local` test
+  accounts so the browser tests can sign in; the form appears only on the Vite dev server.
 
 ### Access
 
@@ -63,16 +75,17 @@ dev: `http://localhost:5173`), and `JWT_PRIVATE_KEY` / `JWKS` from
     npx convex run --prod allowlist:list
     npx convex run --prod allowlist:revoke '{"email":"you@example.com"}'
 
-First visit: choose "Create account" with an allowlisted email. Forgot the password (there's no
-email reset):
-
-    npx convex run --prod auth:setPassword '{"email":"you@example.com","password":"new-password"}'
+Prod allows only `atulpatildbz@gmail.com`. Dev also allows `test@chessfsrs.local`, the browser
+tests' password account.
 
 ## Android
 
 The app is a Capacitor 8 wrapper around the same web build (`capacitor.config.ts`, `android/`).
 Builds use relative asset paths (`BASE_PATH=./`), hash routing, and bundle the engine, so nothing
-depends on the server. Sign-in is email + password, so no OAuth deep links are needed.
+depends on the server. Google refuses sign-in inside a WebView, so the app opens Google in the system browser
+(`@capacitor/browser`) with `redirectTo: chessfsrs://auth`; the intent filter in
+`AndroidManifest.xml` brings that link back to the app, which finishes sign-in with the code
+(`src/pages/SignIn.tsx`).
 
 - Get an APK: Actions → **Android APK** → Run workflow, then download `chessfsrs-apk`. Install it
   on the phone (allow installs from unknown sources). It's debug-signed: fine for personal use.
@@ -87,7 +100,7 @@ depends on the server. Sign-in is email + password, so no OAuth deep links are n
 
     npm test              # unit tests (PGN parsing, move judging, FSRS wrapper, mining rules)
     npm run typecheck     # app + convex/
-    TEST_EMAIL=… TEST_PASSWORD=… node tests/e2e/smoke.mjs out/   # browser flow, needs dev server
+    TEST_EMAIL=test@chessfsrs.local TEST_PASSWORD=… node tests/e2e/smoke.mjs out/   # needs dev server
     npm run mine chesscom <username> 10 normal                    # mining in Node
 
 Layout: `lib/` is shared by the app and Convex (puzzle model, FSRS, mining, game fetching, UCI
@@ -98,4 +111,3 @@ interactive board).
 
 - Offline practice (Convex keeps no offline cache; the app needs a connection).
 - Fitting FSRS parameters to your own review log (the log is already recorded).
-- Google sign-in (needs a redirect URI added to the Google OAuth client).
