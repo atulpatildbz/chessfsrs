@@ -1,9 +1,10 @@
-import { mutation, query } from "./_generated/server";
+import { mutation, query, type MutationCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 import { v } from "convex/values";
 import { requireUser, currentUser } from "./auth";
 import { puzzleInput, insertPuzzle } from "./puzzles";
 
-const site = v.union(v.literal("chesscom"), v.literal("lichess"));
+export const site = v.union(v.literal("chesscom"), v.literal("lichess"));
 
 /** Ids of games already analysed, so a scan only looks at new ones. */
 export const analyzedIds = query({
@@ -21,18 +22,23 @@ export const saveAnalysis = mutation({
   args: { site, gameId: v.string(), puzzles: v.array(puzzleInput) },
   handler: async (ctx, { site, gameId, puzzles }) => {
     const user = await requireUser(ctx);
-    const existing = await ctx.db
-      .query("analyzedGames")
-      .withIndex("by_user_site", (q) => q.eq("userId", user._id).eq("site", site).eq("gameId", gameId))
-      .first();
-    const now = Date.now();
-    let added = 0;
-    for (const [i, p] of puzzles.entries()) if (await insertPuzzle(ctx, user._id, p, now + i)) added++;
-    if (existing) await ctx.db.patch(existing._id, { analyzedAt: now, puzzlesFound: existing.puzzlesFound + added });
-    else await ctx.db.insert("analyzedGames", { userId: user._id, site, gameId, analyzedAt: now, puzzlesFound: added });
-    return { added };
+    return { added: await recordAnalysis(ctx, user._id, site, gameId, puzzles) };
   },
 });
+
+/** Mark a game analysed and add its puzzles (duplicates skipped). Returns how many were added. */
+export async function recordAnalysis(ctx: MutationCtx, userId: Id<"users">, s: typeof site.type, gameId: string, puzzles: (typeof puzzleInput.type)[]) {
+  const existing = await ctx.db
+    .query("analyzedGames")
+    .withIndex("by_user_site", (q) => q.eq("userId", userId).eq("site", s).eq("gameId", gameId))
+    .first();
+  const now = Date.now();
+  let added = 0;
+  for (const [i, p] of puzzles.entries()) if (await insertPuzzle(ctx, userId, p, now + i)) added++;
+  if (existing) await ctx.db.patch(existing._id, { analyzedAt: now, puzzlesFound: existing.puzzlesFound + added });
+  else await ctx.db.insert("analyzedGames", { userId, site: s, gameId, analyzedAt: now, puzzlesFound: added });
+  return added;
+}
 
 export const forgetAnalyzed = mutation({
   args: { site },

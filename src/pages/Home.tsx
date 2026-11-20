@@ -81,8 +81,9 @@ export function Home() {
       )}
 
       {!empty && (
-        <section className="mt-12 grid gap-10 md:grid-cols-[1fr_260px]">
-          <div>
+        <section className="mt-12 grid gap-10 md:grid-cols-[minmax(0,1fr)_260px]">
+          {/* min-w-0: the year of squares is wider than a phone; it scrolls instead of widening the grid. */}
+          <div className="min-w-0">
             <div className="mb-3 flex items-baseline justify-between">
               <h2 className="font-serif text-xl">Last year</h2>
               <span className="text-sm text-sage">{d.totalReviews} review{d.totalReviews === 1 ? "" : "s"}</span>

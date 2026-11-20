@@ -11,8 +11,10 @@
 import type * as allowlist from "../allowlist.js";
 import type * as anki from "../anki.js";
 import type * as auth from "../auth.js";
+import type * as daily from "../daily.js";
 import type * as games from "../games.js";
 import type * as http from "../http.js";
+import type * as maintenance from "../maintenance.js";
 import type * as practice from "../practice.js";
 import type * as puzzles from "../puzzles.js";
 import type * as settings from "../settings.js";
@@ -29,8 +31,10 @@ declare const fullApi: ApiFromModules<{
   allowlist: typeof allowlist;
   anki: typeof anki;
   auth: typeof auth;
+  daily: typeof daily;
   games: typeof games;
   http: typeof http;
+  maintenance: typeof maintenance;
   practice: typeof practice;
   puzzles: typeof puzzles;
   settings: typeof settings;

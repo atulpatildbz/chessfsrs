@@ -1,0 +1,37 @@
+name: Mine puzzles from new games
+
+# Every morning (07:00 IST), find new chess.com / lichess games of everyone with usernames in
+# Settings, run Stockfish over them and add the puzzles. The in-app scan still works for "now".
+on:
+  schedule:
+    - cron: "30 1 * * *"
+  workflow_dispatch:
+    inputs:
+      max:
+        description: New games per site
+        default: "30"
+      days:
+        description: Only games from the last N days
+        default: "14"
+
+concurrency:
+  group: mine
+  cancel-in-progress: false
+
+jobs:
+  mine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Mine and save
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+          MAX: ${{ inputs.max || '30' }}
+          DAYS: ${{ inputs.days || '14' }}
+        run: npx tsx scripts/mine-daily.ts --max "$MAX" --days "$DAYS"

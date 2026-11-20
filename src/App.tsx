@@ -1,7 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import { useConvexAuth, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { BookOpen, Download, Home as HomeIcon, Plus, Settings as SettingsIcon, Swords } from "lucide-react";
+import { BookOpen, ChartNoAxesColumn, Download, Home as HomeIcon, Plus, Settings as SettingsIcon, Swords } from "lucide-react";
 import { api } from "../convex/_generated/api";
 import { navigate, useRoute } from "./lib/router";
 import { setSoundEnabled } from "./lib/sound";
@@ -13,6 +13,7 @@ import { PuzzleDetail } from "./pages/PuzzleDetail";
 import { AddPuzzles } from "./pages/AddPuzzles";
 import { ImportGames } from "./pages/ImportGames";
 import { Settings } from "./pages/Settings";
+import { Patterns } from "./pages/Patterns";
 import { Logo } from "./components/Logo";
 
 export function App() {
@@ -55,7 +56,8 @@ function SignedIn() {
   const p = route.path;
   let page: ReactNode;
   if (p === "/practice") page = <Practice puzzleId={route.params.get("id")} />;
-  else if (p === "/library") page = <Library />;
+  else if (p === "/library") page = <Library key={route.params.get("q") ?? ""} initialSearch={route.params.get("q") ?? ""} />;
+  else if (p === "/patterns") page = <Patterns />;
   else if (p.startsWith("/puzzle/")) page = <PuzzleDetail id={p.slice("/puzzle/".length)} />;
   else if (p === "/add") page = <AddPuzzles />;
   else if (p === "/import") page = <ImportGames />;
@@ -74,6 +76,7 @@ const NAV = [
   { to: "/", label: "Home", icon: HomeIcon },
   { to: "/practice", label: "Practice", icon: Swords },
   { to: "/library", label: "Library", icon: BookOpen },
+  { to: "/patterns", label: "Patterns", icon: ChartNoAxesColumn },
   { to: "/add", label: "Add", icon: Plus },
   { to: "/import", label: "From games", icon: Download },
   { to: "/settings", label: "Settings", icon: SettingsIcon },
@@ -98,7 +101,8 @@ function Nav({ path }: { path: string }) {
       </nav>
       {/* Mobile tab bar */}
       <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-line/60 bg-felt/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
-        {NAV.filter((n) => n.to !== "/settings").map(({ to, label, icon: Icon }) => (
+        {/* Five tabs fit a phone: Add lives in the Library header there, Settings on Home. */}
+        {NAV.filter((n) => n.to !== "/settings" && n.to !== "/add").map(({ to, label, icon: Icon }) => (
           <a key={to} href={`#${to}`} className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[0.68rem] ${active(to) ? "text-brass" : "text-sage"}`}>
             <Icon size={20} strokeWidth={active(to) ? 2.4 : 1.8} />
             {label}

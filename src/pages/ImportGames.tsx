@@ -3,8 +3,7 @@ import { useConvex, useMutation, useQuery } from "convex/react";
 import { Check, Loader2, X } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { fetchChesscomGames, fetchLichessGames, type GameRecord, type Site, type TimeClass } from "../../lib/games";
-import { minePuzzles, type MinedPuzzle, type Strength } from "../../lib/mining";
-import { toPgn } from "../../lib/puzzle";
+import { minePuzzles, toPuzzleInput, type MinedPuzzle, type Strength } from "../../lib/mining";
 import { createEngine } from "../lib/engine";
 import { MiniBoard } from "../components/Board";
 import { figurine } from "../lib/notation";
@@ -47,6 +46,12 @@ export function ImportGames() {
   }, [settings]);
 
   useEffect(() => () => abort.current?.abort(), []);
+
+  // On a phone the status panel sits below the form, behind the tab bar: bring it into view.
+  const status = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (running) status.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [running]);
 
   async function run() {
     setError(null);
@@ -91,15 +96,7 @@ export function ImportGames() {
           const r = await saveAnalysis({
             site: game.site,
             gameId: game.id,
-            puzzles: ps.map((p) => ({
-              fen: p.fen,
-              moves: p.moves,
-              solver: p.solver,
-              source: p.site,
-              pgn: toPgn(p, { Site: p.url, White: p.white, Black: p.black }),
-              tags: [],
-              game: { url: p.url, white: p.white, black: p.black, timeClass: p.timeClass, playedAt: p.playedAt, moveLabel: p.moveLabel, playedSan: p.playedSan, bestSan: p.bestSan, evalBefore: p.evalBefore, evalBest: p.evalBest, evalPlayed: p.evalPlayed, mate: p.mate },
-            })),
+            puzzles: ps.map(toPuzzleInput),
           });
           setLogs((l) => [...l, { game, found: r.added }]);
           if (ps.length) setFound((f) => [...f, ...ps]);
@@ -174,10 +171,11 @@ export function ImportGames() {
 
         <div className="min-w-0">
           {(running || phase) && (
-            <div className="panel p-5">
+            <div ref={status} className="panel scroll-mt-4 p-5">
               <div className="flex items-center gap-2">
-                {running ? <Loader2 size={16} className="animate-spin text-brass" /> : <Check size={16} className="text-moss" />}
-                <p className="truncate">{phase}</p>
+                {running ? <Loader2 size={16} className="shrink-0 animate-spin text-brass" /> : <Check size={16} className="shrink-0 text-moss" />}
+                <p className="min-w-0 flex-1 truncate">{phase}</p>
+                {running && <button type="button" className="-my-2 -mr-2 shrink-0 px-3 py-2 text-sm text-sage underline-offset-4 hover:underline md:hidden" onClick={() => abort.current?.abort()}>Stop</button>}
               </div>
               {progress && (
                 <>

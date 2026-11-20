@@ -36,6 +36,25 @@ Live: https://atulpatildbz.github.io/chessfsrs
   lite, single-threaded WASM, in a Web Worker: no cross-origin isolation needed, so it runs on
   GitHub Pages and in the Android WebView. `npm run mine chesscom <user> 10` runs the same code in
   Node for tuning.
+- **Daily mining** (`.github/workflows/mine.yml`, `scripts/mine-daily.ts`): every day at 01:30 UTC
+  (07:00 IST) a GitHub Actions job runs the same miner in Node for every allowlisted user with a
+  username in Settings. It scans blitz, rapid and classical games from the last 14 days that
+  weren't scanned before, at most 30 per run, and saves the puzzles straight into prod
+  (`convex/daily.ts`, internal functions called with the `CONVEX_DEPLOY_KEY` secret, a prod deploy
+  key). Run it by hand from Actions → **Mine puzzles from new games** → Run workflow (you can set
+  `max` and `days`). Locally: `npx tsx scripts/mine-daily.ts [--prod] [--max 30] [--days 14] [--dry-run]`.
+  GitHub turns off scheduled workflows after 60 days without a commit; re-enable it from the
+  Actions tab if that happens.
+- **Automatic tags** (`lib/motifs.ts`): every puzzle is tagged from its position and solution:
+  mate in 1 / 2 / 3+, back-rank mate, fork, taking a loose piece, sacrifice, promotion, quiet first
+  move, long line, and the game phase. Puzzles mined from games played with under a tenth of the
+  starting clock left also get `time-trouble`. Tags you add yourself are kept. After changing the
+  rules, re-tag everything with `npx convex run [--prod] maintenance:retag` (repeat with the
+  returned `cursor` until it is null).
+- **Patterns**: recall per tag on reviews of puzzles you already knew (the weak spots float to the
+  top, and each one links to those puzzles in the Library), where in your games the missed moves
+  happen (phase, clock), and the puzzles you keep forgetting. After a clean solve, Practice shows
+  your time next to the last clean solve.
 - **Manual puzzles**: paste one or more PGNs with a `[FEN]` header and the solution line. The side
   that plays the last move is the solver (`1... Kg7 2. Nd5 Rh8 3. Bxf6+ Qxf6 4. Nxf6` from a
   black-to-move FEN → you play White and Kg7 is played for you); a Switch button flips it. A bare
@@ -109,6 +128,8 @@ depends on the server. Google refuses sign-in inside a WebView, so the app opens
     npm test              # unit tests (PGN parsing, move judging, FSRS wrapper, mining rules)
     npm run typecheck     # app + convex/
     TEST_EMAIL=test@chessfsrs.local TEST_PASSWORD=… node tests/e2e/smoke.mjs out/   # needs dev server
+    TEST_PASSWORD=… node tests/e2e/mobile.mjs out/                # Pixel 7, touch input
+    BROWSER=webkit TEST_PASSWORD=… node tests/e2e/mobile.mjs out/ # iPhone 13 (Safari engine)
     npm run mine chesscom <username> 10 normal                    # mining in Node
 
 Layout: `lib/` is shared by the app and Convex (puzzle model, FSRS, mining, game fetching, UCI

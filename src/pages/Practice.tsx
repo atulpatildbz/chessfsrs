@@ -151,6 +151,11 @@ function Trainer({ puzzle, graded, desiredRetention = 0.9, header, onGraded, onU
   const [gradeError, setGradeError] = useState<string | null>(null);
   const inFlight = useRef(false);
   const review = useMutation(api.practice.review);
+  // Woodpecker-style feedback: are you recognising this one faster than last time? Frozen at the
+  // first answer, so grading this attempt doesn't replace "last time" with itself.
+  const lastSolveLive = useQuery(api.stats.lastSolve, graded ? { puzzleId: puzzle._id as Id<"puzzles"> } : "skip");
+  const lastSolve = useRef<{ ms: number } | null | undefined>(undefined);
+  if (lastSolve.current === undefined && lastSolveLive !== undefined) lastSolve.current = lastSolveLive;
 
   const line = useMemo(() => ({ fen: puzzle.fen, moves: puzzle.moves, solver: puzzle.solver }), [puzzle]);
   const san = useMemo(() => sanLine(puzzle.fen, puzzle.moves), [puzzle]);
@@ -256,8 +261,9 @@ function Trainer({ puzzle, graded, desiredRetention = 0.9, header, onGraded, onU
             </div>
           )}
           {done && (
-            <div className="mt-3 flex gap-2">
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
               <button className="btn btn-ghost !py-1.5 text-sm" onClick={retry}><RotateCcw size={15} /> Play again</button>
+              {attempt && status === "solved" && attempt.mistakes === 0 && !attempt.revealed && attempt.hints === 0 && <SolveTime ms={attempt.ms} last={lastSolve.current?.ms ?? null} />}
             </div>
           )}
         </div>
@@ -286,6 +292,17 @@ function Trainer({ puzzle, graded, desiredRetention = 0.9, header, onGraded, onU
         )}
       </aside>
     </div>
+  );
+}
+
+function SolveTime({ ms, last }: { ms: number; last: number | null }) {
+  const s = (x: number) => (x < 10_000 ? (x / 1000).toFixed(1) : Math.round(x / 1000)) + " s";
+  const faster = last !== null && ms < last;
+  return (
+    <p className="text-sm text-sage">
+      Solved in <span className="font-semibold text-bone tabular-nums">{s(ms)}</span>
+      {last !== null && <> · <span className={faster ? "text-moss" : ""}>{s(last)} last time</span></>}
+    </p>
   );
 }
 

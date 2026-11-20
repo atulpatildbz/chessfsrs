@@ -1,7 +1,8 @@
 // Turn a played game into puzzles: positions where the user had exactly one good move and missed it.
 import { Chess } from "chess.js";
 import type { GameRecord } from "./games";
-import { type Color, parseUci, uciOf } from "./puzzle";
+import { type Color, parseUci, toPgn, uciOf } from "./puzzle";
+import { TIME_TROUBLE } from "./motifs";
 
 /** One engine line. `cp` is from the side to move's view; mates are ±MATE. */
 export type EngineLine = { uci: string; cp: number; mate: number | null; pv: string[] };
@@ -78,6 +79,9 @@ export type MinedPuzzle = {
   evalBest: number;
   evalPlayed: number;
   mate: number | null; // mate-in-n after the best move, if any
+  /** Seconds left after the mistake, and at the start of the game, from the PGN clock; null without clocks. */
+  clock: number | null;
+  clockStart: number | null;
 };
 
 type Ply = { fenBefore: string; uci: string; san: string; color: Color; moveNumber: number };
@@ -209,6 +213,8 @@ export async function minePuzzles(
       evalBest: best.cp,
       evalPlayed: played,
       mate: best.mate,
+      clock: clocks ? clocks[i] : null,
+      clockStart: clocks ? clocks[game.userColor === "w" ? 0 : 1] ?? null : null,
     });
   }
   // The costliest mistakes first, at most a few per game.
@@ -256,4 +262,24 @@ async function extendLine(fen: string, best: EngineLine, engine: Engine, limit: 
     userMoves++;
   }
   return line;
+}
+
+/** A mistake made with under a tenth of the starting clock left (at least 10 s) counts as time trouble. */
+export const inTimeTrouble = (p: Pick<MinedPuzzle, "clock" | "clockStart">) =>
+  p.clock !== null && p.clockStart !== null && p.clock < Math.max(10, p.clockStart * 0.1);
+
+/** What gets saved for a mined puzzle (the server adds the motif tags). */
+export function toPuzzleInput(p: MinedPuzzle) {
+  return {
+    fen: p.fen,
+    moves: p.moves,
+    solver: p.solver,
+    source: p.site,
+    pgn: toPgn(p, { Site: p.url, White: p.white, Black: p.black }),
+    tags: inTimeTrouble(p) ? [TIME_TROUBLE] : [],
+    game: {
+      url: p.url, white: p.white, black: p.black, timeClass: p.timeClass, playedAt: p.playedAt, moveLabel: p.moveLabel,
+      playedSan: p.playedSan, bestSan: p.bestSan, evalBefore: p.evalBefore, evalBest: p.evalBest, evalPlayed: p.evalPlayed, mate: p.mate,
+    },
+  };
 }

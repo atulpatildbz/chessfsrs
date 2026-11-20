@@ -5,6 +5,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { requireUser, currentUser } from "./auth";
 import { color, gameInfo, source } from "./schema";
 import { dedupeKey, validateLine } from "../lib/puzzle";
+import { motifTags, withAutoTags } from "../lib/motifs";
 import { newCard, type StoredCard } from "../lib/fsrs";
 
 export const puzzleInput = v.object({
@@ -38,7 +39,7 @@ export async function insertPuzzle(ctx: MutationCtx, userId: Id<"users">, p: Inp
     pgn: p.pgn.slice(0, 20_000),
     title: p.title?.slice(0, 200),
     notes: p.notes?.slice(0, 5_000),
-    tags: normTags(p.tags ?? []),
+    tags: normTags(withAutoTags(p.tags ?? [], motifTags(p.fen, p.moves, p.solver))),
     game: p.game,
     dedupeKey: key,
     suspended: keep?.suspended ?? false,

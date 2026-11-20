@@ -26,11 +26,14 @@ async function politeFetch(url: string, signal?: AbortSignal): Promise<Response>
   }
 }
 
+/** `max` new games, newest first; `skip` drops already-analysed ids; `since` (epoch ms) ignores older games. */
+export type FetchOptions = { max: number; timeClasses: TimeClass[]; skip?: (id: string) => boolean; since?: number; signal?: AbortSignal };
+
 const CHESSCOM_TC: Record<string, TimeClass> = { bullet: "bullet", blitz: "blitz", rapid: "rapid", daily: "daily" };
 
 export async function fetchChesscomGames(
   username: string,
-  opts: { max: number; timeClasses: TimeClass[]; skip?: (id: string) => boolean; signal?: AbortSignal },
+  opts: FetchOptions,
 ): Promise<GameRecord[]> {
   const u = username.trim().toLowerCase();
   const res = await politeFetch(`https://api.chess.com/pub/player/${encodeURIComponent(u)}/games/archives`, opts.signal);
@@ -41,6 +44,8 @@ export async function fetchChesscomGames(
   // Look back at most 24 months for enough games.
   for (const url of archives.slice().reverse().slice(0, 24)) {
     if (out.length >= opts.max) break;
+    const [y, m] = url.split("/").slice(-2).map(Number);
+    if (opts.since && Date.UTC(y, m, 1) < opts.since) break; // this month (and all older ones) ended before `since`
     const r = await politeFetch(url, opts.signal);
     if (!r.ok) continue;
     const games: Record<string, any>[] = (await r.json()).games ?? [];
@@ -51,6 +56,7 @@ export async function fetchChesscomGames(
       if (!tc || !opts.timeClasses.includes(tc)) continue;
       const id = String(g.uuid ?? g.url);
       if (opts.skip?.(id)) continue;
+      if (opts.since && (g.end_time ?? 0) * 1000 < opts.since) continue;
       const white = g.white?.username ?? "?";
       const black = g.black?.username ?? "?";
       out.push({
@@ -71,19 +77,22 @@ export async function fetchChesscomGames(
 
 export async function fetchLichessGames(
   username: string,
-  opts: { max: number; timeClasses: TimeClass[]; skip?: (id: string) => boolean; signal?: AbortSignal },
+  opts: FetchOptions,
 ): Promise<GameRecord[]> {
   const u = username.trim();
   const perf: string[] = opts.timeClasses.map((t) => (t === "daily" ? "correspondence" : t));
   // Ask for extra games so that skipping already-analysed ones still leaves `max` new ones.
   const params = new URLSearchParams({
-    max: String(Math.min(300, opts.max * 3)),
+    // With a date window, take the whole window (up to 300): older new games may sit behind many
+    // scanned ones.
+    max: String(opts.since ? 300 : Math.min(300, opts.max * 3)),
     perfType: perf.join(","),
     evals: "true",
     pgnInJson: "true",
     clocks: "true",
     opening: "false",
   });
+  if (opts.since) params.set("since", String(Math.floor(opts.since)));
   const res = await fetch(`https://lichess.org/api/games/user/${encodeURIComponent(u)}?${params}`, {
     headers: { Accept: "application/x-ndjson" },
     signal: opts.signal,

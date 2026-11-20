@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { usePaginatedQuery } from "convex/react";
-import { Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { MiniBoard } from "../components/Board";
 import { STATE_NAMES } from "../../lib/fsrs";
@@ -11,16 +11,19 @@ type St = "new" | "learning" | "review" | "suspended" | undefined;
 const SOURCES: [Src, string][] = [[undefined, "All"], ["chesscom", "chess.com"], ["lichess", "lichess"], ["manual", "Added by hand"]];
 const STATES: [St, string][] = [[undefined, "Any state"], ["new", "New"], ["learning", "Learning"], ["review", "Known"], ["suspended", "Suspended"]];
 
-export function Library() {
+export function Library({ initialSearch = "" }: { initialSearch?: string }) {
   const [source, setSource] = useState<Src>();
   const [state, setState] = useState<St>();
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(initialSearch);
   const { results, status, loadMore } = usePaginatedQuery(api.puzzles.list, { source, state, search: search || undefined }, { initialNumItems: 24 });
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-6 md:px-10 md:py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <h1 className="font-serif text-3xl">Library</h1>
+        <div className="flex w-full items-center justify-between gap-3 md:w-auto">
+          <h1 className="font-serif text-3xl">Library</h1>
+          <a className="btn btn-ghost !py-1.5 text-sm md:hidden" href="#/add"><Plus size={15} /> Add</a>
+        </div>
         <label className="relative w-full sm:w-64">
           <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sage" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search names, tags, notes" className="field !pl-9 text-sm" />
