@@ -5,7 +5,8 @@ import { requireUser, currentUser } from "./auth";
 import { settingsFor } from "./settings";
 import { review as fsrsReview, type Grade } from "../lib/fsrs";
 
-const DAY = 86_400_000;
+/** Learning cards due within this window keep the session open with a countdown (Anki's learn-ahead). */
+const LEARN_AHEAD = 20 * 60_000;
 
 const forPractice = (p: Doc<"puzzles">) => ({
   _id: p._id,
@@ -47,7 +48,7 @@ export const queue = query({
     const fresh = newLeft ? await byState(0).take(Math.min(newLeft, limit)) : [];
     const upcoming = await ctx.db
       .query("puzzles")
-      .withIndex("by_user_due", (q) => q.eq("userId", user._id).eq("suspended", false).gt("dueAt", now).lt("dueAt", dayStart + DAY))
+      .withIndex("by_user_due", (q) => q.eq("userId", user._id).eq("suspended", false).gt("dueAt", now).lt("dueAt", now + LEARN_AHEAD))
       .filter((f) => f.neq(f.field("state"), 0))
       .first();
     return {
@@ -69,12 +70,18 @@ export const review = mutation({
     mistakes: v.number(),
     hints: v.number(),
     revealed: v.boolean(),
+    /** reps the client saw; a second submit of the same review is ignored. */
+    expectedReps: v.number(),
   },
   handler: async (ctx, a) => {
     const user = await requireUser(ctx);
     const p = await ctx.db.get(a.id);
     if (!p || p.userId !== user._id) throw new ConvexError("Puzzle not found");
     if (![1, 2, 3, 4].includes(a.grade)) throw new ConvexError("Bad grade");
+    if (p.card.reps !== a.expectedReps) {
+      const last = await ctx.db.query("reviews").withIndex("by_puzzle", (q) => q.eq("puzzleId", p._id)).order("desc").first();
+      if (last) return { reviewId: last._id, dueAt: p.card.dueAt, state: p.card.state };
+    }
     const s = await settingsFor(ctx, user._id);
     const now = Date.now();
     const card = fsrsReview(p.card, p._id, a.grade as Grade, now, s.desiredRetention);

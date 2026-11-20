@@ -10,6 +10,7 @@ import { formatLine, moverAt, sanLine } from "../../lib/puzzle";
 import { figurine, formatEval, sideName } from "../lib/notation";
 import { startOfToday, useNow } from "../lib/time";
 import { navigate } from "../lib/router";
+import { useStableQuery } from "../lib/convex";
 
 export function Practice({ puzzleId }: { puzzleId: string | null }) {
   if (puzzleId) return <SinglePuzzle id={puzzleId as Id<"puzzles">} />;
@@ -34,7 +35,7 @@ function SinglePuzzle({ id }: { id: Id<"puzzles"> }) {
 function Session() {
   const now = useNow(5_000);
   const dayStart = useMemo(() => startOfToday(), [now]); // eslint-disable-line react-hooks/exhaustive-deps
-  const q = useQuery(api.practice.queue, { now, dayStart });
+  const q = useStableQuery(api.practice.queue, { now, dayStart });
   const [current, setCurrent] = useState<PracticePuzzle | null>(null);
   const [count, setCount] = useState(0);
   const [last, setLast] = useState<{ reviewId: Id<"reviews">; puzzle: PracticePuzzle } | null>(null);
@@ -152,7 +153,7 @@ function Trainer({ puzzle, graded, desiredRetention = 0.9, header, onGraded, onU
     if (!attempt || submitting || !graded) return;
     setSubmitting(true);
     try {
-      const r = await review({ id: puzzle._id as Id<"puzzles">, grade: g, durationMs: attempt.ms, mistakes: attempt.mistakes, hints: attempt.hints, revealed: attempt.revealed });
+      const r = await review({ id: puzzle._id as Id<"puzzles">, grade: g, durationMs: attempt.ms, mistakes: attempt.mistakes, hints: attempt.hints, revealed: attempt.revealed, expectedReps: puzzle.card.reps });
       onGraded?.(r.reviewId, puzzle);
     } finally {
       setSubmitting(false);
@@ -182,6 +183,7 @@ function Trainer({ puzzle, graded, desiredRetention = 0.9, header, onGraded, onU
     if (status === "revealed") return { text: "Here's the line.", tone: "text-sage" };
     if (status === "solved") return feedback === "alt" ? { text: "Checkmate. That works too.", tone: "text-moss" } : { text: attempt && attempt.mistakes > 0 ? "Solved, after a miss." : "Solved.", tone: "text-moss" };
     if (feedback === "wrong") return { text: "Not that one. Try again.", tone: "text-claret" };
+    if (feedback === "wrong-again") return { text: "Still not it. Take a hint, or look at the solution and come back to it.", tone: "text-claret" };
     if (feedback === "correct") return { text: "Right. Keep going.", tone: "text-moss" };
     if (status === "intro") return { text: game ? `Your game vs ${opponentOf(puzzle)}.` : "Watch the move.", tone: "text-sage" };
     return { text: game ? `Find the move you missed.` : `${sideName(puzzle.solver)} to play.`, tone: "text-bone" };

@@ -45,9 +45,10 @@ export default defineSchema({
     desiredRetention: v.number(),
     newPerDay: v.number(),
     boardTheme: v.string(),
-    pieceSet: v.string(),
     sound: v.boolean(),
-    autoNext: v.boolean(),
+    // Legacy fields from early dev builds; unused.
+    pieceSet: v.optional(v.string()),
+    autoNext: v.optional(v.boolean()),
   }).index("by_user", ["userId"]),
 
   puzzles: defineTable({

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useQuery } from "convex/react";
+import { useStableQuery } from "../lib/convex";
 import { api } from "../../convex/_generated/api";
 import { MiniBoard } from "../components/Board";
 import { Heatmap } from "../components/Heatmap";
@@ -10,8 +10,8 @@ export function Home() {
   const now = useNow(30_000);
   const dayStart = useMemo(() => startOfToday(), [now]); // eslint-disable-line react-hooks/exhaustive-deps
   const tz = new Date().getTimezoneOffset();
-  const d = useQuery(api.stats.dashboard, { now, dayStart, tzOffsetMin: tz });
-  const q = useQuery(api.practice.queue, { now, dayStart, limit: 1 });
+  const d = useStableQuery(api.stats.dashboard, { now, dayStart, tzOffsetMin: tz });
+  const q = useStableQuery(api.practice.queue, { now, dayStart, limit: 1 });
 
   if (!d || !q) return null;
   const next = q.due[0] ?? q.fresh[0];

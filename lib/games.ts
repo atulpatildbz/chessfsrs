@@ -17,6 +17,15 @@ export type GameRecord = {
   evals?: (number | null)[];
 };
 
+/** chess.com asks for serial requests and answers 429 when pushed: wait and retry. */
+async function politeFetch(url: string, signal?: AbortSignal): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    const r = await fetch(url, { signal });
+    if (r.status !== 429 || attempt >= 3) return r;
+    await new Promise((ok) => setTimeout(ok, 1500 * 2 ** attempt));
+  }
+}
+
 const CHESSCOM_TC: Record<string, TimeClass> = { bullet: "bullet", blitz: "blitz", rapid: "rapid", daily: "daily" };
 
 export async function fetchChesscomGames(
@@ -24,7 +33,7 @@ export async function fetchChesscomGames(
   opts: { max: number; timeClasses: TimeClass[]; skip?: (id: string) => boolean; signal?: AbortSignal },
 ): Promise<GameRecord[]> {
   const u = username.trim().toLowerCase();
-  const res = await fetch(`https://api.chess.com/pub/player/${encodeURIComponent(u)}/games/archives`, { signal: opts.signal });
+  const res = await politeFetch(`https://api.chess.com/pub/player/${encodeURIComponent(u)}/games/archives`, opts.signal);
   if (res.status === 404) throw new Error(`chess.com user "${username}" not found`);
   if (!res.ok) throw new Error(`chess.com: ${res.status} ${res.statusText}`);
   const archives: string[] = (await res.json()).archives ?? [];
@@ -32,7 +41,7 @@ export async function fetchChesscomGames(
   // Look back at most 24 months for enough games.
   for (const url of archives.slice().reverse().slice(0, 24)) {
     if (out.length >= opts.max) break;
-    const r = await fetch(url, { signal: opts.signal });
+    const r = await politeFetch(url, opts.signal);
     if (!r.ok) continue;
     const games: Record<string, any>[] = (await r.json()).games ?? [];
     for (const g of games.reverse()) {
@@ -72,7 +81,7 @@ export async function fetchLichessGames(
     perfType: perf.join(","),
     evals: "true",
     pgnInJson: "true",
-    clocks: "false",
+    clocks: "true",
     opening: "false",
   });
   const res = await fetch(`https://lichess.org/api/games/user/${encodeURIComponent(u)}?${params}`, {

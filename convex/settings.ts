@@ -1,24 +1,29 @@
 import { mutation, query, type QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
-import type { Doc, Id } from "./_generated/dataModel";
+import type { Id } from "./_generated/dataModel";
 import { requireUser, currentUser } from "./auth";
 
 export const DEFAULTS = {
   desiredRetention: 0.9,
   newPerDay: 15,
   boardTheme: "walnut",
-  pieceSet: "cburnett",
   sound: true,
-  autoNext: false,
 };
 
-export type Settings = Omit<Doc<"settings">, "_id" | "_creationTime" | "userId">;
+export type Settings = typeof DEFAULTS & { chesscomUsername?: string; lichessUsername?: string };
 
 export async function settingsFor(ctx: QueryCtx, userId: Id<"users">): Promise<Settings> {
   const s = await ctx.db.query("settings").withIndex("by_user", (q) => q.eq("userId", userId)).first();
   if (!s) return { ...DEFAULTS };
-  const { _id, _creationTime, userId: _u, ...rest } = s;
-  return { ...DEFAULTS, ...rest };
+  return {
+    ...DEFAULTS,
+    chesscomUsername: s.chesscomUsername,
+    lichessUsername: s.lichessUsername,
+    desiredRetention: s.desiredRetention,
+    newPerDay: s.newPerDay,
+    boardTheme: s.boardTheme,
+    sound: s.sound,
+  };
 }
 
 export const get = query({
@@ -36,9 +41,7 @@ export const update = mutation({
     desiredRetention: v.optional(v.number()),
     newPerDay: v.optional(v.number()),
     boardTheme: v.optional(v.string()),
-    pieceSet: v.optional(v.string()),
     sound: v.optional(v.boolean()),
-    autoNext: v.optional(v.boolean()),
   },
   handler: async (ctx, patch) => {
     const user = await requireUser(ctx);

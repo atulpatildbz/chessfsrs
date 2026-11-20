@@ -1,5 +1,5 @@
 // React wrapper around Lichess' chessground board.
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Chessground } from "@lichess-org/chessground";
 import type { Api } from "@lichess-org/chessground/api";
 import type { Config } from "@lichess-org/chessground/config";
@@ -40,17 +40,33 @@ export function Board({ config, onReady, className = "" }: { config: Config; onR
   );
 }
 
-/** Static thumbnail of a position. */
+const PIECE: Record<string, string> = { p: "pawn", n: "knight", b: "bishop", r: "rook", q: "queen", k: "king" };
+
+/**
+ * Static thumbnail of a position: plain elements styled by chessground's CSS, no board instance,
+ * so a library page of dozens stays light on phones.
+ */
 export function MiniBoard({ fen, orientation, lastMove }: { fen: string; orientation: "white" | "black"; lastMove?: [Key, Key] }) {
-  const el = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!el.current) return;
-    const cg = Chessground(el.current, { fen, orientation, viewOnly: true, coordinates: false, lastMove, animation: { enabled: false }, drawable: { enabled: false } });
-    return () => cg.destroy();
+  // Markup as a string: chessground's CSS targets <piece>/<square> elements, which React warns about.
+  const html = useMemo(() => {
+    const flip = orientation === "black";
+    const at = (file: number, rank: number) => `transform:translate(${(flip ? 7 - file : file) * 100}%,${(flip ? rank : 7 - rank) * 100}%)`;
+    let out = (lastMove ?? []).map((k) => `<square class="last-move" style="${at(k.charCodeAt(0) - 97, Number(k[1]) - 1)}"></square>`).join("");
+    fen.split(" ")[0].split("/").forEach((row, r) => {
+      let file = 0;
+      for (const ch of row) {
+        if (/\d/.test(ch)) { file += Number(ch); continue; }
+        const color = ch === ch.toUpperCase() ? "white" : "black";
+        const name = PIECE[ch.toLowerCase()];
+        if (name) out += `<piece class="${color} ${name}" style="${at(file, 7 - r)}"></piece>`;
+        file++;
+      }
+    });
+    return `<cg-container><cg-board>${out}</cg-board></cg-container>`;
   }, [fen, orientation, lastMove]);
   return (
     <div className="board-frame board-mini">
-      <div ref={el} />
+      <div className="cg-wrap" dangerouslySetInnerHTML={{ __html: html }} />
     </div>
   );
 }

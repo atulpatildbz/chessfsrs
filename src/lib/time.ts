@@ -1,5 +1,11 @@
 export const DAY = 86_400_000;
-export const startOfToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); };
+/** Start of the study day: 4 am local, like Anki, so a late-night session counts as the same day. */
+export const startOfToday = () => {
+  const d = new Date();
+  if (d.getHours() < 4) d.setDate(d.getDate() - 1);
+  d.setHours(4, 0, 0, 0);
+  return d.getTime();
+};
 
 /** Re-renders every `ms`, returning a time rounded down to `ms` (keeps Convex query args stable). */
 import { useEffect, useState } from "react";

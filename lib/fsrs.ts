@@ -144,11 +144,11 @@ export function formatInterval(ms: number): string {
  * Suggested grade from how the attempt went. The user can always override.
  * - showed the solution, or any wrong move -> Again
  * - needed a hint -> Hard
- * - clean -> Good; clean and quick -> Easy
+ * - clean -> Good. Easy is never suggested: a fast solve is often a remembered picture rather than
+ *   calculation, and Easy pushes a puzzle out for weeks. Pick it yourself when it was trivial.
  */
 export function suggestGrade(a: { mistakes: number; hints: number; revealed: boolean; ms: number; userMoves: number }): Grade {
   if (a.revealed || a.mistakes > 0) return 1;
   if (a.hints > 0) return 2;
-  const perMove = a.ms / Math.max(1, a.userMoves);
-  return perMove <= 6_000 ? 4 : 3;
+  return 3;
 }

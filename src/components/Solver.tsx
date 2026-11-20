@@ -16,7 +16,7 @@ type Props = {
   onStatus?: (s: SolverStatus, ply: number, feedback: Feedback) => void;
   onFinish?: (a: Attempt) => void;
 };
-export type Feedback = "none" | "correct" | "wrong" | "alt";
+export type Feedback = "none" | "correct" | "wrong" | "wrong-again" | "alt";
 
 const colorName = (c: "w" | "b") => (c === "w" ? "white" : "black");
 const PROMO = ["q", "n", "r", "b"] as const;
@@ -104,7 +104,7 @@ export const Solver = forwardRef<SolverHandle, Props>(function Solver({ puzzle, 
       stats.current.mistakes++;
       sounds.wrong();
       setShake(true);
-      emit("user", "wrong");
+      emit("user", stats.current.mistakes >= 2 ? "wrong-again" : "wrong");
       cg.current?.set({ highlight: { custom: new Map([[to as Key, "wrong-sq"]]) }, movable: { color: undefined } });
       later(() => { if (status.current === "user") sync(ply.current > 0 ? lastOf() : undefined); }, 550);
       return;

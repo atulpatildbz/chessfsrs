@@ -36,6 +36,7 @@ describe("fsrs wrapper", () => {
     expect(suggestGrade({ mistakes: 0, hints: 0, revealed: true, ms: 1000, userMoves: 1 })).toBe(1);
     expect(suggestGrade({ mistakes: 0, hints: 1, revealed: false, ms: 1000, userMoves: 1 })).toBe(2);
     expect(suggestGrade({ mistakes: 0, hints: 0, revealed: false, ms: 60000, userMoves: 2 })).toBe(3);
+    expect(suggestGrade({ mistakes: 0, hints: 0, revealed: false, ms: 1000, userMoves: 2 })).toBe(3);
   });
   it("formats intervals", () => {
     expect(formatInterval(30_000)).toBe("<1m");

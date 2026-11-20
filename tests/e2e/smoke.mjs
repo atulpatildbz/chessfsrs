@@ -54,7 +54,7 @@ async function move(from, to) { await clickSquare(from); await page.waitForTimeo
 
 await page.goto(BASE + "#/practice");
 await page.waitForSelector("cg-board");
-await page.waitForTimeout(1600); // opponent's set-up move
+await page.waitForTimeout(12000); // opponent's set-up move, and a couple of queue refreshes (must not reset the board)
 await shot("05-practice-start");
 // Our puzzle may not be first if the account has others: find it via text of the prompt instead.
 await move("c3", "b5"); // wrong

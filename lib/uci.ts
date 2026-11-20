@@ -29,17 +29,26 @@ export class UciEngine implements Engine {
     });
   }
 
-  analyse(fen: string, opts: { depth: number; multipv: number; signal?: AbortSignal }): Promise<EngineLine[]> {
+  private fresh = true;
+  newGame() {
+    this.fresh = true;
+  }
+
+  analyse(fen: string, opts: { depth: number; nodes?: number; multipv: number; signal?: AbortSignal }): Promise<EngineLine[]> {
     const run = async () => {
       await this.ready;
       if (opts.signal?.aborted) throw new DOMException("Aborted", "AbortError");
       this.t.send(`setoption name MultiPV value ${opts.multipv}`);
-      this.t.send("ucinewgame");
+      if (this.fresh) {
+        this.t.send("ucinewgame");
+        await this.exchange("isready", (l) => l === "readyok");
+        this.fresh = false;
+      }
       this.t.send(`position fen ${fen}`);
       const lines = new Map<number, EngineLine>();
       const onAbort = () => this.t.send("stop");
       opts.signal?.addEventListener("abort", onAbort, { once: true });
-      await this.exchange(`go depth ${opts.depth}`, (l) => l.startsWith("bestmove"), (l) => {
+      await this.exchange(`go depth ${opts.depth}${opts.nodes ? ` nodes ${opts.nodes}` : ""}`, (l) => l.startsWith("bestmove"), (l) => {
         const parsed = parseInfo(l);
         if (parsed) lines.set(parsed.multipv, parsed.line);
       });

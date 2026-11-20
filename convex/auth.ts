@@ -2,7 +2,7 @@ import { convexAuth, getAuthUserId, modifyAccountCredentials, invalidateSessions
 import { Password } from "@convex-dev/auth/providers/Password";
 import { ConvexError, v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
-import { internalAction, type QueryCtx } from "./_generated/server";
+import { internalAction, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { emailAllowed, normalizeEmail } from "./allowlist";
 
@@ -18,7 +18,17 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
     }),
   ],
   callbacks: {
-    // Only allowlisted emails get a session (sign-up of other emails is refused here too).
+    // Accounts are only created for allowlisted emails, so sign-up attempts leave nothing behind.
+    async createOrUpdateUser(ctx, { existingUserId, profile }) {
+      if (existingUserId) return existingUserId;
+      const email = normalizeEmail(String(profile.email ?? ""));
+      const qctx = ctx as unknown as QueryCtx;
+      if (!(await emailAllowed(qctx, email))) throw new ConvexError(NOT_ALLOWED);
+      const existing = await qctx.db.query("users").withIndex("email", (q) => q.eq("email", email)).first();
+      if (existing) return existing._id;
+      return await (ctx as unknown as MutationCtx).db.insert("users", { email });
+    },
+    // And sessions only for emails that are still allowlisted.
     async beforeSessionCreation(ctx, { userId }) {
       if (!(await allowedUserById(ctx as unknown as QueryCtx, userId))) throw new ConvexError(NOT_ALLOWED);
     },
