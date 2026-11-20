@@ -1,0 +1,34 @@
+// Hint, second hint (arrow) and Show solution on the first puzzle in the practice queue.
+//   TEST_EMAIL=… TEST_PASSWORD=… node tests/e2e/hints.mjs [outDir]
+import { chromium } from "playwright";
+const BASE = process.env.BASE_URL ?? "http://localhost:5173/";
+const OUT = process.argv[2] ?? "test-results";
+const b = await chromium.launch();
+const p = await b.newPage({ viewport: { width: 1280, height: 820 } });
+const errs = [];
+p.on("pageerror", (e) => errs.push(String(e)));
+await p.goto(BASE);
+await p.fill("input[name=email]", process.env.TEST_EMAIL);
+await p.fill("input[name=password]", process.env.TEST_PASSWORD);
+await p.click("button:has-text('Sign in')");
+await p.waitForSelector("nav");
+await p.goto(BASE + "#/library");
+await p.waitForSelector("a[href^='#/puzzle/']");
+await p.click("a[href^='#/puzzle/'] >> nth=0");
+await p.click("text=Try it");
+await p.waitForSelector("cg-board");
+await p.waitForTimeout(1500);
+await p.keyboard.press("h");
+await p.waitForTimeout(300);
+console.log("hint square:", await p.locator("square.hint-sq").count());
+await p.keyboard.press("h");
+await p.waitForTimeout(300);
+console.log("arrow:", await p.locator("svg.cg-shapes g, svg.cg-shapes line").count() > 0);
+await p.screenshot({ path: `${OUT}/hint.png` });
+await p.keyboard.press("s");
+await p.waitForTimeout(5000);
+console.log("revealed:", await p.locator("text=Here's the line.").count());
+console.log("grade buttons in preview mode (expect 0):", await p.locator("button:has-text('Good')").count());
+await p.screenshot({ path: `${OUT}/revealed.png` });
+console.log(errs.join("\n") || "no errors");
+await b.close();
