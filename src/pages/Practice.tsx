@@ -40,16 +40,21 @@ function Session() {
   const [count, setCount] = useState(0);
   const [last, setLast] = useState<{ reviewId: Id<"reviews">; puzzle: PracticePuzzle } | null>(null);
   const undo = useMutation(api.practice.undo);
+  const undoing = useRef(false);
+  // A queue snapshot taken before the last grade landed still lists that puzzle with its old reps.
+  const stale = (p: PracticePuzzle) => last !== null && p._id === last.puzzle._id && p.card.reps === last.puzzle.card.reps;
 
   // Pick the next puzzle: due ones first, with a new puzzle after every two reviews. A graded
   // puzzle drops out of the queue by itself: Convex resolves the mutation only once queries
   // reflect it.
   useEffect(() => {
     if (current || !q) return;
-    const pickNew = q.fresh.length > 0 && (q.due.length === 0 || count % 3 === 2);
-    const next = pickNew ? q.fresh[0] : q.due[0];
+    const due = q.due.filter((p) => !stale(p));
+    const fresh = q.fresh.filter((p) => !stale(p));
+    const pickNew = fresh.length > 0 && (due.length === 0 || count % 3 === 2);
+    const next = pickNew ? fresh[0] : due[0];
     if (next) setCurrent(next);
-  }, [q, current, count]);
+  }, [q, current, count, last]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onGraded = useCallback((reviewId: Id<"reviews">, p: PracticePuzzle) => {
     setLast({ reviewId, puzzle: p });
@@ -58,11 +63,18 @@ function Session() {
   }, []);
 
   const doUndo = async () => {
-    if (!last) return;
-    await undo({ reviewId: last.reviewId });
-    setCurrent({ ...last.puzzle });
-    setCount((c) => Math.max(0, c - 1));
-    setLast(null);
+    if (!last || undoing.current) return;
+    undoing.current = true;
+    try {
+      await undo({ reviewId: last.reviewId });
+      setCurrent({ ...last.puzzle });
+      setCount((c) => Math.max(0, c - 1));
+      setLast(null);
+    } catch {
+      setLast(null); // already undone elsewhere
+    } finally {
+      undoing.current = false;
+    }
   };
 
   if (!q) return null;
@@ -136,6 +148,8 @@ function Trainer({ puzzle, graded, desiredRetention = 0.9, header, onGraded, onU
   const [feedback, setFeedback] = useState<Feedback>("none");
   const [attempt, setAttempt] = useState<Attempt | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [gradeError, setGradeError] = useState<string | null>(null);
+  const inFlight = useRef(false);
   const review = useMutation(api.practice.review);
 
   const line = useMemo(() => ({ fen: puzzle.fen, moves: puzzle.moves, solver: puzzle.solver }), [puzzle]);
@@ -150,15 +164,20 @@ function Trainer({ puzzle, graded, desiredRetention = 0.9, header, onGraded, onU
   const onFinish = useCallback((a: Attempt) => setAttempt((prev) => prev ?? a), []);
 
   const grade = useCallback(async (g: Grade) => {
-    if (!attempt || submitting || !graded) return;
+    if (!attempt || inFlight.current || !graded) return;
+    inFlight.current = true;
     setSubmitting(true);
+    setGradeError(null);
     try {
       const r = await review({ id: puzzle._id as Id<"puzzles">, grade: g, durationMs: attempt.ms, mistakes: attempt.mistakes, hints: attempt.hints, revealed: attempt.revealed, expectedReps: puzzle.card.reps });
       onGraded?.(r.reviewId, puzzle);
+    } catch {
+      setGradeError("Couldn't save the grade. Check your connection and try again.");
+      inFlight.current = false;
     } finally {
       setSubmitting(false);
     }
-  }, [attempt, graded, onGraded, puzzle, review, submitting]);
+  }, [attempt, graded, onGraded, puzzle, review]);
 
   const retry = () => { setFeedback("none"); solver.current?.retry(); };
 
@@ -172,7 +191,11 @@ function Trainer({ puzzle, graded, desiredRetention = 0.9, header, onGraded, onU
       else if (k === "r" && done) retry();
       else if (k === "u" && onUndo) onUndo();
       else if (done && graded && ["1", "2", "3", "4"].includes(k)) void grade(Number(k) as Grade);
-      else if (done && graded && (k === " " || k === "enter") && suggested) { e.preventDefault(); void grade(suggested); }
+      else if (done && graded && (k === " " || k === "enter") && suggested) {
+        if ((e.target as Element | null)?.closest?.("button, a, select")) return; // let focused controls act
+        e.preventDefault();
+        void grade(suggested);
+      }
     };
     window.addEventListener("keydown", on);
     return () => window.removeEventListener("keydown", on);
@@ -228,6 +251,7 @@ function Trainer({ puzzle, graded, desiredRetention = 0.9, header, onGraded, onU
                   </button>
                 ))}
               </div>
+              {gradeError && <p className="mt-2 text-sm text-claret" role="alert">{gradeError}</p>}
               <p className="mt-2.5 text-xs text-sage">{gradeReason(attempt!)} <span className="hidden md:inline">Space accepts, 1–4 to choose.</span></p>
             </div>
           )}

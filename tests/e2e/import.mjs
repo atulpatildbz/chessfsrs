@@ -18,6 +18,14 @@ await page.fill("input[placeholder='Leave empty to skip'] >> nth=0", process.env
 await page.selectOption("select", "10");
 await page.click("button:has-text('Bullet')");
 await page.click("button:has-text('Quick')");
+// Stop works mid-scan (forget nothing: stopped games simply aren't marked as scanned).
+await page.selectOption("select", "50");
+await page.click("button:has-text('Scan games')");
+await page.waitForSelector("text=/Analysing/", { timeout: 60000 });
+await page.click("button:has-text('Stop')");
+await page.waitForSelector("text=/Stopped/", { timeout: 30000 });
+console.log("stop: ok");
+await page.selectOption("select", "10");
 const t = Date.now();
 await page.click("button:has-text('Scan games')");
 await page.waitForTimeout(4000);

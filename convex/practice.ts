@@ -45,7 +45,11 @@ export const queue = query({
       await ctx.db.query("reviews").withIndex("by_user_time", (q) => q.eq("userId", user._id).gte("reviewedAt", dayStart)).collect()
     ).filter((r) => r.stateBefore === 0).length;
     const newLeft = Math.max(0, s.newPerDay - introducedToday);
-    const fresh = newLeft ? await byState(0).take(Math.min(newLeft, limit)) : [];
+    // New puzzles aren't time-gated: one added a second ago (server clock) must show up even if the
+    // client's rounded `now` is behind it.
+    const fresh = newLeft
+      ? await ctx.db.query("puzzles").withIndex("by_user_queue", (q) => q.eq("userId", user._id).eq("suspended", false).eq("state", 0)).take(Math.min(newLeft, limit))
+      : [];
     const upcoming = await ctx.db
       .query("puzzles")
       .withIndex("by_user_due", (q) => q.eq("userId", user._id).eq("suspended", false).gt("dueAt", now).lt("dueAt", now + LEARN_AHEAD))

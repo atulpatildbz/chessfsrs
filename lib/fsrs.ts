@@ -81,7 +81,8 @@ function toLib(card: StoredCard, cardId: string): LibCard {
     cardId,
     dueAt: new Date(card.dueAt),
     lastReviewAt: card.lastReviewAt === null ? null : new Date(card.lastReviewAt),
-    scheduleStatus: (["new", "learning", "review", "relearning"] as const)[card.state] ?? "new",
+    // ts-fsrs 6 has no "relearning" status: relearning cards are state 3 with status "learning".
+    scheduleStatus: (["new", "learning", "review", "learning"] as const)[card.state] ?? "new",
   } as unknown as LibCard;
 }
 
@@ -106,15 +107,18 @@ export function newCard(now: number): StoredCard {
   return fromLib(scheduler().newCard({ now: new Date(now) }));
 }
 
+/** ts-fsrs rejects a review time before the last review; clocks of client and server can disagree. */
+const notBefore = (card: StoredCard, now: number) => (card.lastReviewAt === null ? now : Math.max(now, card.lastReviewAt));
+
 export function review(card: StoredCard, cardId: string, grade: Grade, now: number, desiredRetention = 0.9) {
-  const r = scheduler(desiredRetention).review({ card: toLib(card, cardId), grade, now: new Date(now) });
+  const r = scheduler(desiredRetention).review({ card: toLib(card, cardId), grade, now: new Date(notBefore(card, now)) });
   return fromLib(r.card);
 }
 
 /** Next due time for each grade, for the grade buttons. */
 export function preview(card: StoredCard, cardId: string, now: number, desiredRetention = 0.9): Record<Grade, number> {
   const out = {} as Record<Grade, number>;
-  for (const p of scheduler(desiredRetention).preview({ card: toLib(card, cardId), now: new Date(now) })) {
+  for (const p of scheduler(desiredRetention).preview({ card: toLib(card, cardId), now: new Date(notBefore(card, now)) })) {
     out[p.grade as Grade] = fromLib(p.card).dueAt;
   }
   return out;

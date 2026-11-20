@@ -44,3 +44,20 @@ describe("fsrs wrapper", () => {
     expect(formatInterval(3 * 86_400_000)).toBe("3d");
   });
 });
+
+describe("fsrs edge cases", () => {
+  it("previews and reviews a relearning card (state 3)", () => {
+    let c = review(newCard(T0), "id2", 3, T0);
+    c = review(c, "id2", 1, c.dueAt); // lapse -> relearning
+    expect(c.state).toBe(3);
+    const p = preview(c, "id2", c.dueAt);
+    expect(p[3]).toBeGreaterThan(c.dueAt);
+    const next = review(c, "id2", 3, c.dueAt);
+    expect(next.state).toBe(2);
+  });
+  it("tolerates a client clock behind the last review", () => {
+    const c = review(newCard(T0), "id3", 1, T0);
+    expect(() => preview(c, "id3", T0 - 60_000)).not.toThrow();
+    expect(() => review(c, "id3", 3, T0 - 60_000)).not.toThrow();
+  });
+});

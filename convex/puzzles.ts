@@ -98,16 +98,20 @@ export const list = query({
     if (!user) return { page: [], isDone: true, continueCursor: "" };
     const needle = search?.trim().toLowerCase();
     let q = ctx.db.query("puzzles").withIndex("by_user_created", (q) => q.eq("userId", user._id)).order("desc");
+    if (state && state !== "suspended") q = q.filter((f) => f.eq(f.field("suspended"), false));
     if (source) q = q.filter((f) => f.eq(f.field("source"), source));
     if (state === "suspended") q = q.filter((f) => f.eq(f.field("suspended"), true));
     else if (state === "new") q = q.filter((f) => f.eq(f.field("state"), 0));
     else if (state === "learning") q = q.filter((f) => f.or(f.eq(f.field("state"), 1), f.eq(f.field("state"), 3)));
     else if (state === "review") q = q.filter((f) => f.eq(f.field("state"), 2));
+    if (needle) {
+      // Search the whole library (a personal collection: hundreds to a few thousand rows), not one page.
+      const all = await q.collect();
+      const hits = all.filter((p) => [p.title, p.notes, p.tags.join(" "), p.game?.white, p.game?.black, p.game?.moveLabel].join(" ").toLowerCase().includes(needle));
+      return { page: hits.slice(0, 200).map(summary), isDone: true, continueCursor: "" };
+    }
     const res = await q.paginate(paginationOpts);
-    const page = needle
-      ? res.page.filter((p) => [p.title, p.notes, p.tags.join(" "), p.game?.white, p.game?.black, p.game?.moveLabel].join(" ").toLowerCase().includes(needle))
-      : res.page;
-    return { ...res, page: page.map(summary) };
+    return { ...res, page: res.page.map(summary) };
   },
 });
 
@@ -143,7 +147,9 @@ export const update = mutation({
       const err = validateLine({ fen: p.fen, moves: p.moves, solver: patch.solver });
       if (err) throw new ConvexError(err);
     }
-    await ctx.db.patch(id, { ...patch, tags: patch.tags ? normTags(patch.tags) : undefined });
+    // Only send fields that were given: an explicit undefined would delete the field.
+    const { tags, ...rest } = patch;
+    await ctx.db.patch(id, tags !== undefined ? { ...rest, tags: normTags(tags) } : rest);
   },
 });
 

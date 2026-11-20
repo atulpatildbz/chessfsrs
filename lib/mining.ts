@@ -245,7 +245,7 @@ async function extendLine(fen: string, best: EngineLine, engine: Engine, limit: 
     const mateNow = b.mate === 1;
     const forced = s ? winProb(b.cp) - winProb(s.cp) >= THRESHOLDS.onlyMoveGap : false;
     // Continue for a forced follow-up that keeps the advantage, or the final mating blow.
-    if (!mateNow && (!forced || winProb(b.cp) < 0.5)) break;
+    if (!mateNow && (!forced || winProb(b.cp) < THRESHOLDS.minBest)) break;
     try {
       c.move(parseUci(b.uci));
     } catch {

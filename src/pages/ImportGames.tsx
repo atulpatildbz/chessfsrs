@@ -130,6 +130,7 @@ export function ImportGames() {
       </p>
 
       <div className="mt-8 grid gap-8 md:grid-cols-[minmax(0,360px)_1fr]">
+        <div className="flex flex-col gap-8">
         <fieldset disabled={running} className="flex flex-col gap-4">
           <label className="flex flex-col gap-1.5 text-sm text-sage">chess.com username
             <input className="field text-bone" value={chesscom} onChange={(e) => setChesscom(e.target.value)} placeholder="Leave empty to skip" autoCapitalize="none" autoCorrect="off" />
@@ -159,13 +160,17 @@ export function ImportGames() {
             </div>
             <p className="mt-1.5 text-xs">{STRENGTHS.find((s) => s[0] === strength)![2]}</p>
           </div>
-          {running ? (
-            <button type="button" className="btn btn-ghost" disabled={false} onClick={() => abort.current?.abort()} style={{ pointerEvents: "auto" }}><X size={16} /> Stop</button>
-          ) : (
-            <button type="button" className="btn btn-primary" onClick={run}>Scan games</button>
-          )}
-          {error && <p className="text-sm text-claret">{error}</p>}
         </fieldset>
+          {/* Outside the fieldset: a disabled fieldset disables every button in it, Stop included. */}
+          <div className="-mt-4 flex flex-col gap-3">
+            {running ? (
+              <button type="button" className="btn btn-ghost" onClick={() => abort.current?.abort()}><X size={16} /> Stop</button>
+            ) : (
+              <button type="button" className="btn btn-primary" onClick={run}>Scan games</button>
+            )}
+            {error && <p className="text-sm text-claret">{error}</p>}
+          </div>
+        </div>
 
         <div className="min-w-0">
           {(running || phase) && (

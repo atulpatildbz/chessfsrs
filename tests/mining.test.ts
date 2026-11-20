@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { judgeCandidate, minePuzzles, winProb, MATE, type Engine, type EngineLine } from "../lib/mining";
-import { parseInfo } from "../lib/uci";
+import { completeLines, parseInfo } from "../lib/uci";
 import type { GameRecord } from "../lib/games";
 
 describe("winProb", () => {
@@ -24,7 +24,7 @@ describe("judgeCandidate", () => {
 describe("parseInfo", () => {
   it("parses cp and multipv", () => {
     const r = parseInfo("info depth 12 seldepth 18 multipv 2 score cp -35 nodes 1000 nps 1 time 5 pv e7e5 g1f3 b8c6");
-    expect(r).toEqual({ multipv: 2, line: { uci: "e7e5", cp: -35, mate: null, pv: ["e7e5", "g1f3", "b8c6"] } });
+    expect(r).toEqual({ depth: 12, multipv: 2, line: { uci: "e7e5", cp: -35, mate: null, pv: ["e7e5", "g1f3", "b8c6"] } });
   });
   it("parses mates", () => {
     expect(parseInfo("info depth 5 score mate 2 pv a1a8 g8h7 h1h8")!.line).toMatchObject({ cp: MATE, mate: 2 });
@@ -34,6 +34,22 @@ describe("parseInfo", () => {
     expect(parseInfo("info depth 10 score cp 20 lowerbound pv e2e4")).toBeNull();
     expect(parseInfo("info string NNUE enabled")).toBeNull();
     expect(parseInfo("bestmove e2e4")).toBeNull();
+  });
+});
+
+describe("completeLines", () => {
+  const L = (uci: string, cp: number) => ({ uci, cp, mate: null, pv: [uci] });
+  it("uses the deepest depth that has every MultiPV line", () => {
+    // Depth 13 was cut off by the node limit after line 1: use depth 12 for both lines.
+    const byDepth = new Map([
+      [12, new Map([[1, L("e2e4", 30)], [2, L("d2d4", 25)]])],
+      [13, new Map([[1, L("d2d4", 40)]])],
+    ]);
+    expect(completeLines(byDepth, 2).map((l) => l.uci)).toEqual(["e2e4", "d2d4"]);
+  });
+  it("accepts fewer lines when there are fewer legal moves", () => {
+    const byDepth = new Map([[20, new Map([[1, L("g8h8", -500)]])]]);
+    expect(completeLines(byDepth, 2)).toHaveLength(1);
   });
 });
 

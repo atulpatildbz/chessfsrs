@@ -61,7 +61,8 @@ export const Solver = forwardRef<SolverHandle, Props>(function Solver({ puzzle, 
     if (finished.current) return;
     finished.current = true;
     const s = stats.current;
-    onFinish?.({ mistakes: s.mistakes, hints: s.hints, revealed, ms: Date.now() - (s.started || Date.now()), userMoves: userTotal });
+    // Once the solution was shown, the attempt counts as revealed even if replayed afterwards.
+    onFinish?.({ mistakes: s.mistakes, hints: s.hints, revealed: revealed || s.revealed, ms: Date.now() - (s.started || Date.now()), userMoves: userTotal });
   }, [onFinish, userTotal]);
 
   /** Play the move at the current ply (auto move) with sound. */
@@ -82,6 +83,7 @@ export const Solver = forwardRef<SolverHandle, Props>(function Solver({ puzzle, 
 
   const start = useCallback(() => {
     clearTimers();
+    setPromo(null);
     chess.current = new Chess(puzzle.fen);
     ply.current = 0;
     finished.current = false;
@@ -98,6 +100,7 @@ export const Solver = forwardRef<SolverHandle, Props>(function Solver({ puzzle, 
   }, [emit, playAuto, puzzle, sync, toUserTurn]);
 
   const applyUserMove = useCallback((uci: string) => {
+    if (status.current !== "user") return;
     const verdict = judgeMove(puzzle, ply.current, uci);
     const { from, to } = parseUci(uci);
     if (verdict === "wrong") {
@@ -201,11 +204,13 @@ export const Solver = forwardRef<SolverHandle, Props>(function Solver({ puzzle, 
     reveal() {
       if (status.current === "solved" || status.current === "revealed") return;
       clearTimers();
+      setPromo(null);
       stats.current.revealed = true;
       status.current = "revealed";
       emit("revealed");
+      finish(true); // grade right away; the line keeps playing out
       const step = () => {
-        if (ply.current >= puzzle.moves.length) { finish(true); return; }
+        if (ply.current >= puzzle.moves.length) return;
         const isUser = moverAt(puzzle.fen, ply.current) === puzzle.solver;
         const m = playAuto();
         sync([m.from, m.to], isUser ? new Map([[m.to as Key, "hint-sq"]]) : undefined);

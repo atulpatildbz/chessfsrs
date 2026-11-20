@@ -28,7 +28,8 @@ export const dashboard = query({
     const since = dayStart - 7 * 52 * DAY;
     const reviews = await ctx.db.query("reviews").withIndex("by_user_time", (q) => q.eq("userId", user._id).gte("reviewedAt", since)).collect();
     // Bucket by local day index (days since epoch in local time).
-    const localDay = (t: number) => Math.floor((t - tzOffsetMin * 60_000) / DAY);
+    // Study days roll over at 4 am local, like the practice queue.
+    const localDay = (t: number) => Math.floor((t - tzOffsetMin * 60_000 - 4 * 3_600_000) / DAY);
     const perDay: Record<number, number> = {};
     for (const r of reviews) perDay[localDay(r.reviewedAt)] = (perDay[localDay(r.reviewedAt)] ?? 0) + 1;
     const today = localDay(now);
