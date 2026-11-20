@@ -40,6 +40,14 @@ Live: https://atulpatildbz.github.io/chessfsrs
   that plays the last move is the solver (`1... Kg7 2. Nd5 Rh8 3. Bxf6+ Qxf6 4. Nxf6` from a
   black-to-move FEN → you play White and Kg7 is played for you); a Switch button flips it. A bare
   FEN line followed by moves works too.
+- **Anki import** (`scripts/import-anki.ts`, `lib/anki.ts`): reads every note type with a `PGN`
+  field ("Chess 2.0", AnkiChess) from an Anki collection. Mistake cards made by AnkiChess keep
+  their game info (your move, the best move, evals, game link). Each card's Anki review log is
+  replayed through FSRS-7 into the `reviews` table; review cards keep Anki's own memory state and
+  due date. Re-running skips puzzles already imported (it doesn't update their schedule).
+
+      npx tsx scripts/import-anki.ts --prod --email you@example.com [--dry-run] [collection.anki2]
+
 - **Access**: Google sign-in through Convex Auth, the same setup as Habitool and ebook-reader.
   Anyone can complete the Google step, but only emails on the `allowedEmails` table get a session;
   everyone else sees "That Google account isn't on the access list."

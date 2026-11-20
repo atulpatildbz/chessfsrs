@@ -5,7 +5,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { requireUser, currentUser } from "./auth";
 import { color, gameInfo, source } from "./schema";
 import { dedupeKey, validateLine } from "../lib/puzzle";
-import { newCard } from "../lib/fsrs";
+import { newCard, type StoredCard } from "../lib/fsrs";
 
 export const puzzleInput = v.object({
   fen: v.string(),
@@ -22,13 +22,13 @@ export const puzzleInput = v.object({
 type Input = typeof puzzleInput.type;
 
 /** Insert unless the same position + line already exists. Returns the new id or null for a duplicate. */
-export async function insertPuzzle(ctx: MutationCtx, userId: Id<"users">, p: Input, now: number) {
+export async function insertPuzzle(ctx: MutationCtx, userId: Id<"users">, p: Input, now: number, keep?: { card: StoredCard; suspended: boolean }) {
   const err = validateLine(p);
   if (err) throw new ConvexError(`Invalid puzzle: ${err}`);
   const key = dedupeKey(p);
   const dup = await ctx.db.query("puzzles").withIndex("by_user_key", (q) => q.eq("userId", userId).eq("dedupeKey", key)).first();
   if (dup) return null;
-  const card = newCard(now);
+  const card = keep?.card ?? newCard(now);
   return await ctx.db.insert("puzzles", {
     userId,
     fen: p.fen,
@@ -41,7 +41,7 @@ export async function insertPuzzle(ctx: MutationCtx, userId: Id<"users">, p: Inp
     tags: normTags(p.tags ?? []),
     game: p.game,
     dedupeKey: key,
-    suspended: false,
+    suspended: keep?.suspended ?? false,
     createdAt: now,
     card,
     state: card.state,

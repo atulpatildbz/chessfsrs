@@ -91,8 +91,12 @@ function normalizeFen(fen: string) {
 
 function fromPgnText(text: string, original: string): ParseResult {
   // chess.js only follows the mainline; strip things it chokes on: NAGs like $1 are fine, but
-  // clock/eval comments are noise. "1..." move-number forms are accepted.
-  const cleaned = text.replace(/\{[^}]*\}/g, " ").replace(/;[^\n]*/g, " ");
+  // clock/eval comments are noise. "1..." move-number forms are accepted. chess.js also rejects
+  // header names with underscores ([Puzzle_Length "3"]), which PGN allows.
+  const cleaned = text
+    .replace(/\{[^}]*\}/g, " ")
+    .replace(/;[^\n]*/g, " ")
+    .replace(/^\[(\w+)/gm, (_, name: string) => `[${name.replace(/_/g, "")}`);
   const chess = new Chess();
   chess.loadPgn(cleaned, { strict: false });
   const headers = chess.getHeaders();

@@ -81,7 +81,7 @@ function Session() {
 
   const header = (
     <div className="flex items-center gap-4 text-sm text-sage">
-      <span title="Due now"><b className="font-semibold text-bone">{q.due.length}</b> due</span>
+      <span title="Due now"><b className="font-semibold text-bone">{q.due.length}{q.dueMore ? "+" : ""}</b> due</span>
       <span title="New puzzles left today"><b className="font-semibold text-bone">{q.fresh.length}</b> new</span>
       <span title="Done this session"><b className="font-semibold text-bone">{count}</b> done</span>
       {last && <button onClick={doUndo} className="ml-auto flex items-center gap-1 hover:text-bone" title="Undo last grade (U)"><Undo2 size={15} /> Undo</button>}
@@ -273,7 +273,7 @@ function Trainer({ puzzle, graded, desiredRetention = 0.9, header, onGraded, onU
                   In the game you played <b className="figurine font-semibold text-claret">{figurine(game.playedSan)}</b> ({formatEval(game.evalPlayed)}).
                   The only good move was <b className="figurine font-semibold text-moss">{figurine(game.bestSan)}</b> ({formatEval(game.evalBest, game.mate)}).
                 </p>
-                <p>{game.white} vs {game.black} · {game.timeClass}{game.playedAt ? ` · ${new Date(game.playedAt).toLocaleDateString()}` : ""}</p>
+                <p>{[`${game.white} vs ${game.black}`, game.timeClass, game.playedAt ? new Date(game.playedAt).toLocaleDateString() : ""].filter(Boolean).join(" · ")}</p>
               </div>
             )}
             {puzzle.notes && <p className="mt-3 whitespace-pre-wrap text-sage">{puzzle.notes}</p>}

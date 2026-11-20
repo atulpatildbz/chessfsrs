@@ -57,6 +57,8 @@ export const queue = query({
       .first();
     return {
       due: [...learning, ...reviews].map(forPractice),
+      // At most `limit` reviews are loaded; a big backlog (an Anki import, a long break) has more.
+      dueMore: reviews.length === limit,
       fresh: fresh.map(forPractice),
       newLeft,
       introducedToday,
