@@ -28,10 +28,6 @@ export const THRESHOLDS = {
   onlyMoveGap: 0.15,
   /** Played move must be this much worse than the best move. */
   missDrop: 0.2,
-  /** Skip if still clearly winning after the played move. */
-  stillWinning: 0.85,
-  /** Skip if the position is hopeless even after the best move. */
-  hopeless: 0.1,
   /** Longest line (counting user moves) we extend to. */
   maxUserMoves: 3,
   /** Mates up to this length get their full line. */
@@ -49,8 +45,6 @@ export function judgeCandidate(x: { best: number; second: number | null; played:
   if (gap < THRESHOLDS.onlyMoveGap) return { keep: false, reason: "several good moves" };
   const drop = wb - winProb(x.played);
   if (drop < THRESHOLDS.missDrop) return { keep: false, reason: "played move was fine" };
-  if (winProb(x.played) >= THRESHOLDS.stillWinning) return { keep: false, reason: "still winning anyway" };
-  if (wb < THRESHOLDS.hopeless) return { keep: false, reason: "lost anyway" };
   return { keep: true, reason: "only move missed" };
 }
 
@@ -227,8 +221,12 @@ async function extendLine(fen: string, best: EngineLine, engine: Engine, depth: 
     const [b, s] = lines;
     // Continue only for a forced follow-up that keeps (or wins) the advantage.
     if (winProb(b.cp) - winProb(s.cp) < THRESHOLDS.onlyMoveGap || winProb(b.cp) < 0.5) break;
+    try {
+      c.move(parseUci(b.uci));
+    } catch {
+      break;
+    }
     line.push(reply, b.uci);
-    c.move(parseUci(b.uci));
     pv = b.pv;
     userMoves++;
   }

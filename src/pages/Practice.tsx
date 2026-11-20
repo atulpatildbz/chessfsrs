@@ -32,7 +32,7 @@ function SinglePuzzle({ id }: { id: Id<"puzzles"> }) {
 }
 
 function Session() {
-  const now = useNow(15_000);
+  const now = useNow(5_000);
   const dayStart = useMemo(() => startOfToday(), [now]); // eslint-disable-line react-hooks/exhaustive-deps
   const q = useQuery(api.practice.queue, { now, dayStart });
   const [current, setCurrent] = useState<PracticePuzzle | null>(null);

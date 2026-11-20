@@ -26,8 +26,9 @@ Live: https://atulpatildbz.github.io/chessfsrs
   1. a quick Stockfish pass over every position you moved from (lichess' own analysis is used
      when the game has it) flags moves that cost ≥ 12 points of win probability;
   2. each flagged move is checked with MultiPV 2 at depth. It becomes a puzzle when the best move
-     beats the second best by ≥ 15 points (only one move worked), your move cost ≥ 20 points, you
-     weren't still clearly winning afterwards, and the position wasn't lost anyway.
+     beats the second best by ≥ 15 points (only one move worked) and your move cost ≥ 20 points.
+     On the win-probability scale that already rules out positions that were decided either way
+     (+9 vs +5 is no lesson), which the old raw-centipawn rule over-produced.
 
   The puzzle starts one move earlier, so you see your opponent's move first. Short mates (≤ 5) get
   the full mating line; otherwise the line continues while your next move is also forced. Win
