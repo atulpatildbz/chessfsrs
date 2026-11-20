@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">chessfsrs</string>
+    <string name="title_activity_main">chessfsrs</string>
+    <string name="package_name">com.atulpatildbz.chessfsrs</string>
+    <string name="custom_url_scheme">com.atulpatildbz.chessfsrs</string>
+</resources>

@@ -1,0 +1,41 @@
+# Build an installable (debug-signed) APK of the Capacitor app.
+# Run it from the Actions tab ("Run workflow"), or push a tag like v0.1.0 to also attach it to a release.
+name: Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@v3
+      - run: npm ci
+      - run: npm run cap:android
+        env:
+          VITE_CONVEX_URL: ${{ vars.CONVEX_URL }}
+      - run: ./gradlew assembleDebug
+        working-directory: android
+      - run: mv android/app/build/outputs/apk/debug/app-debug.apk chessfsrs.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chessfsrs-apk
+          path: chessfsrs.apk
+      - if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: chessfsrs.apk

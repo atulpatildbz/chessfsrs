@@ -1,0 +1,94 @@
+@import "tailwindcss";
+@import "@lichess-org/chessground/assets/chessground.base.css";
+@import "@lichess-org/chessground/assets/chessground.cburnett.css";
+
+@theme {
+  --color-felt: #0f2a23;
+  --color-felt-2: #163a30;
+  --color-felt-3: #1e4a3d;
+  --color-line: #2a5547;
+  --color-bone: #ede6d6;
+  --color-sage: #97afa3;
+  --color-brass: #c9a34e;
+  --color-brass-2: #e0bd6a;
+  --color-moss: #86b86b;
+  --color-claret: #c0493f;
+  --font-sans: "Onest", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Young Serif", Georgia, serif;
+  --font-figurine: "Noto Sans Symbols 2", "Onest", sans-serif;
+}
+
+:root {
+  color-scheme: dark;
+  /* Board squares, overridden per theme. */
+  --sq-light: #e6cfa1;
+  --sq-dark: #a87a4f;
+}
+:root[data-board="felt"] { --sq-light: #e9e4cf; --sq-dark: #6e9168; }
+:root[data-board="slate"] { --sq-light: #dee3e6; --sq-dark: #8ca2ad; }
+:root[data-board="walnut"] { --sq-light: #e6cfa1; --sq-dark: #a87a4f; }
+
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: var(--color-felt);
+  color: var(--color-bone);
+  font-family: var(--font-sans);
+  font-feature-settings: "tnum" 1;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible { outline: 2px solid var(--color-brass); outline-offset: 2px; }
+
+.figurine { font-family: var(--font-figurine); font-variant-emoji: text; }
+
+/* ---------- Board ---------- */
+.board-frame { position: relative; width: 100%; aspect-ratio: 1; border-radius: 6px; overflow: hidden; box-shadow: 0 0 0 1px rgb(0 0 0 / 0.35), 0 18px 40px -18px rgb(0 0 0 / 0.7); }
+.board-frame .cg-wrap { width: 100%; height: 100%; }
+cg-board {
+  background-color: var(--sq-dark);
+  background-image:
+    conic-gradient(var(--sq-dark) 25%, var(--sq-light) 0 50%, var(--sq-dark) 0 75%, var(--sq-light) 0);
+  background-size: 25% 25%;
+}
+cg-board square.last-move { background-color: rgb(205 210 106 / 0.5); }
+cg-board square.selected { background-color: rgb(20 85 30 / 0.5); }
+cg-board square.move-dest { background: radial-gradient(rgb(20 85 30 / 0.5) 22%, transparent 0); }
+cg-board square.move-dest:hover { background: rgb(20 85 30 / 0.3); }
+cg-board square.oc.move-dest { background: radial-gradient(transparent 0%, transparent 79%, rgb(20 85 30 / 0.4) 80%); }
+cg-board square.check { background: radial-gradient(ellipse at center, rgb(255 0 0) 0%, rgb(231 0 0) 25%, rgb(169 0 0 / 0) 89%, rgb(158 0 0 / 0) 100%); }
+cg-board square.wrong-sq { background-color: rgb(192 73 63 / 0.6); }
+cg-board square.right-sq { background-color: rgb(134 184 107 / 0.6); }
+cg-board square.hint-sq { box-shadow: inset 0 0 0 4px var(--color-brass-2); }
+.cg-wrap coords { font-family: var(--font-sans); font-weight: 600; font-size: 10px; }
+.cg-wrap coords.ranks { left: 2px; top: 1px; }
+.cg-wrap coords.files { bottom: 0; left: 2px; text-align: left; }
+.cg-wrap coords coord { color: var(--sq-dark) !important; text-shadow: none !important; }
+.cg-wrap coords coord:nth-child(even) { color: var(--sq-light) !important; }
+.orientation-black .cg-wrap coords coord:nth-child(even), .cg-wrap.orientation-black coords coord:nth-child(even) { color: var(--sq-light) !important; }
+
+.board-mini cg-board square.last-move { background-color: rgb(205 210 106 / 0.45); }
+.board-mini { box-shadow: 0 0 0 1px rgb(0 0 0 / 0.35); border-radius: 4px; }
+
+@keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+.shake { animation: shake 0.32s ease-in-out; }
+@keyframes pop { from { transform: scale(0.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.pop { animation: pop 0.18s ease-out; }
+@media (prefers-reduced-motion: reduce) { .shake, .pop { animation: none; } }
+
+/* ---------- Controls ---------- */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; border-radius: 10px; padding: 0.6rem 1rem; font-weight: 600; font-size: 0.95rem; transition: background-color 0.15s, color 0.15s, border-color 0.15s; cursor: pointer; user-select: none; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-primary { background: var(--color-brass); color: #1c1606; }
+.btn-primary:hover:not(:disabled) { background: var(--color-brass-2); }
+.btn-ghost { background: transparent; color: var(--color-bone); border: 1px solid var(--color-line); }
+.btn-ghost:hover:not(:disabled) { background: var(--color-felt-2); }
+.btn-quiet { background: var(--color-felt-2); color: var(--color-bone); }
+.btn-quiet:hover:not(:disabled) { background: var(--color-felt-3); }
+.field { width: 100%; background: var(--color-felt); border: 1px solid var(--color-line); border-radius: 10px; padding: 0.6rem 0.75rem; color: var(--color-bone); }
+.field:focus { outline: none; border-color: var(--color-brass); }
+.field::placeholder { color: rgb(151 175 163 / 0.6); }
+.panel { background: var(--color-felt-2); border-radius: 14px; }
+.kbd { font-size: 0.7rem; opacity: 0.55; font-weight: 500; }
+.scroll-thin { scrollbar-width: thin; scrollbar-color: var(--color-line) transparent; }

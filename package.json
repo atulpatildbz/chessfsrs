@@ -1,0 +1,48 @@
+{
+  "name": "chessfsrs",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Spaced-repetition chess puzzle trainer (FSRS) with puzzles mined from your own chess.com and lichess games.",
+  "scripts": {
+    "predev": "node scripts/copy-engine.mjs",
+    "dev": "vite",
+    "prebuild": "node scripts/copy-engine.mjs",
+    "build": "tsc -p . && vite build",
+    "build:mobile": "node scripts/copy-engine.mjs && BASE_PATH=./ vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc -p . && tsc -p convex",
+    "mine": "tsx scripts/mine.ts",
+    "cap:android": "npm run build:mobile && npx cap sync android"
+  },
+  "dependencies": {
+    "@auth/core": "^0.41.3",
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/core": "^8.6.2",
+    "@convex-dev/auth": "^0.0.98",
+    "@lichess-org/chessground": "^10.5.0",
+    "chess.js": "^1.4.0",
+    "convex": "^1.51.0",
+    "lucide-react": "^1.77.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "stockfish": "^19.0.1",
+    "ts-fsrs": "^6.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.6.2",
+    "@tailwindcss/vite": "^4.3.5",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "jose": "^6.2.18",
+    "playwright": "^1.65.1",
+    "tailwindcss": "^4.3.5",
+    "tsx": "^4.23.15",
+    "typescript": "~5.9",
+    "vite": "^8.3.8",
+    "vitest": "^4.1.12"
+  }
+}

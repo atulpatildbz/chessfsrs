@@ -1,0 +1,30 @@
+// Scan a few real chess.com games in the browser (Stockfish WASM worker) and save the puzzles.
+//   CHESSCOM=<username> node tests/e2e/import.mjs [outDir]
+import { chromium } from "playwright";
+const BASE = process.env.BASE_URL ?? "http://localhost:5173/";
+const OUT = process.argv[2] ?? "test-results";
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+const errors = [];
+page.on("pageerror", (e) => errors.push(String(e)));
+page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+await page.goto(BASE);
+await page.fill("input[name=email]", process.env.TEST_EMAIL ?? "test@chessfsrs.local");
+await page.fill("input[name=password]", process.env.TEST_PASSWORD);
+await page.click("button:has-text('Sign in')");
+await page.waitForSelector("nav");
+await page.goto(BASE + "#/import");
+await page.fill("input[placeholder='Leave empty to skip'] >> nth=0", process.env.CHESSCOM);
+await page.selectOption("select", "10");
+await page.click("button:has-text('Bullet')");
+await page.click("button:has-text('Quick')");
+const t = Date.now();
+await page.click("button:has-text('Scan games')");
+await page.waitForTimeout(4000);
+await page.screenshot({ path: `${OUT}/import-running.png` });
+await page.waitForSelector("text=/^Done\\.|No new games/", { timeout: 300000 });
+console.log("scan took", Math.round((Date.now() - t) / 1000), "s");
+console.log(await page.locator(".panel").first().innerText());
+await page.screenshot({ path: `${OUT}/import-done.png`, fullPage: true });
+console.log(errors.length ? "ERRORS:\n" + errors.join("\n") : "no console errors");
+await browser.close();

@@ -1,0 +1,14 @@
+node_modules
+dist
+.env.local
+.env*.local
+public/engine
+*.tsbuildinfo
+.DS_Store
+android/app/build
+android/.gradle
+test-results
+android/app/src/main/assets/public
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+android/capacitor-cordova-android-plugins/build
