@@ -4,7 +4,7 @@ import { ArrowLeft, ExternalLink, Pause, Play, RotateCcw, Trash2 } from "lucide-
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { MiniBoard } from "../components/Board";
-import { formatLine, sanLine } from "../../lib/puzzle";
+import { formatLine, lichessAnalysisUrl, sanLine } from "../../lib/puzzle";
 import { GRADE_NAMES, retrievability, STATE_NAMES, type Grade } from "../../lib/fsrs";
 import { figurine, formatEval, moveOf, sideName } from "../lib/notation";
 import { usePuzzles } from "../lib/local/store";
@@ -77,7 +77,7 @@ export function PuzzleDetail({ id }: { id: string }) {
           </div>
           <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
             {p.game?.url && <a className="link inline-flex items-center gap-1" href={p.game.url} target="_blank" rel="noreferrer">Open game <ExternalLink size={13} /></a>}
-            <a className="link inline-flex items-center gap-1" href={`https://lichess.org/analysis/${p.fen.replace(/ /g, "_")}`} target="_blank" rel="noreferrer">Analyse on Lichess <ExternalLink size={13} /></a>
+            <a className="link inline-flex items-center gap-1" href={lichessAnalysisUrl(p)} target="_blank" rel="noreferrer">Analyse on Lichess <ExternalLink size={13} /></a>
           </div>
           {log.length > 0 && (
             <div>

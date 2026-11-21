@@ -129,6 +129,20 @@ export function parseUci(u: string) {
   return { from: u.slice(0, 2), to: u.slice(2, 4), promotion: u.length > 4 ? u[4] : undefined };
 }
 
+/**
+ * Lichess analysis board at the moment the puzzle starts: the stored position with the opponent's
+ * move already played (and highlighted, one step back to undo it), the solver's side at the bottom.
+ * Lichess loads /analysis/pgn/<pgn> and opens it at the last move.
+ */
+export function lichessAnalysisUrl(p: PuzzleLine): string {
+  const color = `?color=${p.solver === "w" ? "white" : "black"}`;
+  if (p.moves.length === 0 || moverAt(p.fen, 0) === p.solver) return `https://lichess.org/analysis/${p.fen.replace(/ /g, "_")}${color}`;
+  const san = new Chess(p.fen).move(parseUci(p.moves[0])).san;
+  const n = Number(p.fen.split(" ")[5]) || 1;
+  const pgn = `[FEN "${p.fen}"]\n\n${n}${turnOf(p.fen) === "w" ? "." : "..."} ${san}`;
+  return `https://lichess.org/analysis/pgn/${encodeURIComponent(pgn)}${color}`;
+}
+
 /** "1... Kg7 2. Nd5 Rh8" style text. */
 export function formatLine(fen: string, san: string[]): string {
   const parts = fen.split(" ");

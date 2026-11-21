@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dedupeKey, formatLine, judgeMove, parsePuzzle, splitPgns, userPlies, validateLine } from "../lib/puzzle";
+import { dedupeKey, formatLine, judgeMove, lichessAnalysisUrl, parsePuzzle, splitPgns, userPlies, validateLine } from "../lib/puzzle";
 
 const EXAMPLE = `[Site "Chess.com"]
 [Result "*"]
@@ -73,5 +73,22 @@ describe("dedupeKey", () => {
     const a = { fen: "8/8/8/8/8/8/8/K6k w - - 0 1", moves: ["a1a2"], solver: "w" as const };
     const b = { ...a, fen: "8/8/8/8/8/8/8/K6k w - - 12 40" };
     expect(dedupeKey(a)).toBe(dedupeKey(b));
+  });
+});
+
+describe("lichessAnalysisUrl", () => {
+  it("opens the puzzle's position with the opponent's move played, from the solver's side", () => {
+    const r = parsePuzzle(EXAMPLE);
+    if (!r.ok) throw new Error("example didn't parse");
+    const url = lichessAnalysisUrl(r.puzzle);
+    expect(url.startsWith("https://lichess.org/analysis/pgn/")).toBe(true);
+    expect(url.endsWith("?color=white")).toBe(true);
+    const pgn = decodeURIComponent(url.slice("https://lichess.org/analysis/pgn/".length, url.indexOf("?")));
+    expect(pgn).toBe(`[FEN "${r.puzzle.fen}"]\n\n1... Kg7`);
+  });
+
+  it("links the plain position when the solver moves first", () => {
+    const url = lichessAnalysisUrl({ fen: "6k1/5ppp/8/8/8/8/8/R5K1 w - - 0 1", moves: ["a1a8"], solver: "w" });
+    expect(url).toBe("https://lichess.org/analysis/6k1/5ppp/8/8/8/8/8/R5K1_w_-_-_0_1?color=white");
   });
 });

@@ -8,7 +8,7 @@ import { enqueue, isInFlight, removeOp, useLocal, usePuzzles } from "../lib/loca
 import { useOffline } from "../lib/local/sync";
 import { Solver, type Attempt, type Feedback, type SolverHandle, type SolverStatus } from "../components/Solver";
 import { formatInterval, GRADE_NAMES, preview, suggestGrade, type Grade } from "../../lib/fsrs";
-import { formatLine, moverAt, sanLine } from "../../lib/puzzle";
+import { formatLine, lichessAnalysisUrl, moverAt, sanLine } from "../../lib/puzzle";
 import { figurine, formatEval, sideName } from "../lib/notation";
 import { startOfToday, useNow } from "../lib/time";
 import { navigate } from "../lib/router";
@@ -243,7 +243,7 @@ function Trainer({ puzzle: initial, graded, desiredRetention = 0.9, header, onGr
       {puzzle.notes && <p className="prose-serif mt-3 whitespace-pre-wrap italic text-dim">{puzzle.notes}</p>}
       <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
         {game?.url && <a className="link inline-flex items-center gap-1" href={game.url} target="_blank" rel="noreferrer">Open game <ExternalLink size={13} /></a>}
-        <a className="link inline-flex items-center gap-1" href={`https://lichess.org/analysis/${puzzle.fen.replace(/ /g, "_")}?color=${puzzle.solver === "w" ? "white" : "black"}`} target="_blank" rel="noreferrer">Analyse on Lichess <ExternalLink size={13} /></a>
+        <a className="link inline-flex items-center gap-1" href={lichessAnalysisUrl(puzzle)} target="_blank" rel="noreferrer">Analyse on Lichess <ExternalLink size={13} /></a>
         <a className="text-dim underline-offset-[3px] hover:text-ink hover:underline" href={`#/puzzle/${puzzle._id}`}>Edit notes</a>
       </div>
     </div>
