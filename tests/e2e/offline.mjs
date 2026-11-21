@@ -30,7 +30,11 @@ await page.fill("input[name=password]", PASSWORD);
 await page.click("button:has-text('Sign in')");
 await page.waitForSelector("main", { timeout: 20000 });
 // Let the service worker install and the library copy arrive.
-await page.waitForFunction(async () => (await navigator.serviceWorker.getRegistration())?.active, null, { timeout: 20000 });
+// (waitForFunction treats an async predicate's Promise as truthy, so poll instead.)
+for (let i = 0; !(await page.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.active?.state === "activated")); i++) {
+  if (i > 40) throw new Error("service worker never activated");
+  await page.waitForTimeout(500);
+}
 await page.goto(BASE + "#/library");
 await page.waitForFunction(() => /Library \d+/.test(document.querySelector("h1")?.textContent ?? "") && !/Library 0/.test(document.querySelector("h1").textContent), null, { timeout: 20000 });
 await page.waitForTimeout(1500);
