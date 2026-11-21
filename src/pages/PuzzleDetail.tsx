@@ -40,7 +40,7 @@ export function PuzzleDetail({ id }: { id: string }) {
 
   return (
     <div className="mx-auto max-w-5xl px-5 py-6 md:px-10 md:py-10">
-      <button className="mb-6 flex items-center gap-1.5 text-sm text-dim hover:text-boxwood" onClick={() => history.length > 1 ? history.back() : navigate("/library")}><ArrowLeft size={16} /> Library</button>
+      <button className="mb-6 flex items-center gap-1.5 text-sm text-dim hover:text-ink" onClick={() => history.length > 1 ? history.back() : navigate("/library")}><ArrowLeft size={16} /> Library</button>
       <div className="grid gap-8 md:grid-cols-[minmax(0,380px)_1fr]">
         <div>
           <MiniBoard fen={p.fen} orientation={p.solver === "w" ? "white" : "black"} />

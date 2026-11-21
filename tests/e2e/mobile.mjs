@@ -86,6 +86,14 @@ await page.goto(BASE + `#/practice?id=${id}`);
 await page.waitForSelector("cg-board");
 await page.waitForTimeout(1500); // opponent's set-up move
 const scrollBefore = await page.evaluate(() => document.querySelector("main")?.scrollTop ?? 0);
+// A wrong move, then Hint at once: the red square's reset must not wipe the hint.
+await tap("c3");
+const b5 = await center("b5");
+await page.touchscreen.tap(b5.x, b5.y);
+await page.locator("cg-board square.wrong-sq:visible").waitFor({ timeout: 3000 });
+await page.keyboard.press("h"); // Hint while the red square shows
+await page.waitForTimeout(800);
+check(await page.locator("cg-board square.hint-sq:visible").count() > 0, "a hint asked for right after a wrong move stays on the board");
 await tap("c3"); await tap("d5"); // Nd5 by tapping
 await page.waitForTimeout(1200); // Rh8 reply
 check((await pieceOn("d5"))?.includes("knight"), "tap-tap move played Nd5");
@@ -95,8 +103,8 @@ check((await pieceOn("f6"))?.includes("queen"), "touch drag played Bxf6+ (and Qx
 const scrollAfter = await page.evaluate(() => document.querySelector("main")?.scrollTop ?? 0);
 check(scrollAfter === scrollBefore, `dragging a piece doesn't scroll the page (${scrollBefore} → ${scrollAfter})`);
 await tap("d5"); await tap("f6"); // Nxf6
-await page.waitForSelector("text=Solved.", { timeout: 5000 }).catch(() => null);
-check(await page.locator("text=Solved.").count() > 0, "solved the puzzle with touch input");
+await page.waitForSelector("text=/^Solved/", { timeout: 5000 }).catch(() => null);
+check(await page.locator("text=/^Solved/").count() > 0, "solved the puzzle with touch input");
 await shot("solved");
 
 // The daily queue: reveal, grade with the suggested button, next puzzle; then undo.

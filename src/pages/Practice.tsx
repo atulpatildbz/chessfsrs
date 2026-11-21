@@ -78,10 +78,10 @@ function Session() {
   const header = (
     <div>
       <div className="flex items-center gap-4 text-sm text-dim">
-        <span title="Due now"><b className="font-semibold text-boxwood">{q.due.length}</b> due</span>
-        <span title="New puzzles left today"><b className="font-semibold text-boxwood">{q.fresh.length}</b> new</span>
-        <span title="Done this session"><b className="font-semibold text-boxwood">{count}</b> done</span>
-        {last && <button onClick={doUndo} className="ml-auto flex items-center gap-1 hover:text-boxwood" title="Undo last grade (U)"><Undo2 size={15} /> Undo</button>}
+        <span title="Due now"><b className="font-semibold text-ink">{q.due.length}</b> due</span>
+        <span title="New puzzles left today"><b className="font-semibold text-ink">{q.fresh.length}</b> new</span>
+        <span title="Done this session"><b className="font-semibold text-ink">{count}</b> done</span>
+        {last && <button onClick={doUndo} className="ml-auto flex items-center gap-1 hover:text-ink" title="Undo last grade (U)"><Undo2 size={15} /> Undo</button>}
       </div>
       <SyncNote />
     </div>
@@ -223,12 +223,12 @@ function Trainer({ puzzle: initial, graded, desiredRetention = 0.9, header, onGr
     if (feedback === "wrong-again") return { text: "Still not it. Take a hint, or look at the solution and come back to it.", tone: "text-blunder" };
     if (feedback === "correct") return { text: "Right. Keep going.", tone: "text-good" };
     if (status === "intro") return { text: game ? `Your game vs ${opponentOf(puzzle)}.` : "Watch the move.", tone: "text-dim" };
-    return { text: game ? `Find the move you missed.` : `${sideName(puzzle.solver)} to play.`, tone: "text-boxwood" };
+    return { text: game ? `Find the move you missed.` : `${sideName(puzzle.solver)} to play.`, tone: "text-ink" };
   })();
 
   const details = done && (
     <div className="pop border-t border-line px-1 pt-4 text-sm leading-relaxed md:border-0 md:pt-0">
-      <p className="figurine prose-serif text-boxwood">
+      <p className="figurine prose-serif text-ink">
         {formatLine(puzzle.fen, san.map(figurine))}
       </p>
       {game && (
@@ -244,7 +244,7 @@ function Trainer({ puzzle: initial, graded, desiredRetention = 0.9, header, onGr
       <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
         {game?.url && <a className="link inline-flex items-center gap-1" href={game.url} target="_blank" rel="noreferrer">Open game <ExternalLink size={13} /></a>}
         <a className="link inline-flex items-center gap-1" href={`https://lichess.org/analysis/${puzzle.fen.replace(/ /g, "_")}?color=${puzzle.solver === "w" ? "white" : "black"}`} target="_blank" rel="noreferrer">Analyse on Lichess <ExternalLink size={13} /></a>
-        <a className="text-dim underline-offset-[3px] hover:text-boxwood hover:underline" href={`#/puzzle/${puzzle._id}`}>Edit notes</a>
+        <a className="text-dim underline-offset-[3px] hover:text-ink hover:underline" href={`#/puzzle/${puzzle._id}`}>Edit notes</a>
       </div>
     </div>
   );
@@ -253,10 +253,10 @@ function Trainer({ puzzle: initial, graded, desiredRetention = 0.9, header, onGr
     <div className="mx-auto max-w-6xl md:flex md:flex-row md:items-start md:gap-8 md:px-6 md:pb-6 md:pt-6">
       {/* On a phone the first screen holds the stats, the board and the controls, with the board
           centred in whatever height is left; the line and game details scroll in below it. */}
-      <div className="flex min-h-[calc(100dvh-3.5rem-env(safe-area-inset-bottom))] flex-col gap-3 py-3 md:contents">
+      <div className="flex min-h-[calc(100dvh-3.5rem-env(safe-area-inset-bottom)-env(safe-area-inset-top))] flex-col gap-3 py-3 md:contents">
         {header && <div className="px-4 md:hidden">{header}</div>}
         <div className="flex w-full flex-1 items-center md:block md:w-auto md:flex-1">
-          <div className="mx-auto w-full max-w-[min(100%,max(260px,calc(100dvh-22.5rem-env(safe-area-inset-bottom))))] md:max-w-[min(100%,calc(100dvh-3rem))]">
+          <div className="mx-auto w-full max-w-[min(100%,max(260px,calc(100dvh-22.5rem-env(safe-area-inset-bottom)-env(safe-area-inset-top))))] md:max-w-[min(100%,calc(100dvh-3rem))]">
             <Solver ref={solver} puzzle={line} onStatus={onStatus} onFinish={onFinish} />
           </div>
         </div>
@@ -266,7 +266,7 @@ function Trainer({ puzzle: initial, graded, desiredRetention = 0.9, header, onGr
 
           <div className="panel flex min-h-[14rem] flex-col p-4 md:block md:min-h-0 md:p-5">
             <div className="flex items-center gap-3">
-              <span className={`h-3.5 w-3.5 shrink-0 rounded-[3px] border ${puzzle.solver === "w" ? "border-boxwood bg-boxwood" : "border-dim bg-ebony"}`} aria-hidden />
+              <span className={`h-3.5 w-3.5 shrink-0 rounded-[3px] border border-dim ${puzzle.solver === "w" ? "bg-[#f7efdd]" : "bg-[#17120e]"}`} aria-hidden />
               <p className={`font-serif text-[1.3rem] leading-snug md:text-[1.45rem] ${prompt.tone}`} aria-live="polite">{prompt.text}</p>
             </div>
             {!done && userMoveIdx.length > 1 && (
@@ -286,7 +286,7 @@ function Trainer({ puzzle: initial, graded, desiredRetention = 0.9, header, onGr
                 <div className="grid grid-cols-4 gap-2">
                   {([1, 2, 3, 4] as Grade[]).map((g) => (
                     <button key={g} onClick={() => grade(g)}
-                      className={`flex flex-col items-center rounded-md px-1 py-2.5 transition-colors ${g === suggested ? "bg-boxwood text-ebony hover:bg-boxwood-2" : "bg-ebony-3 text-boxwood hover:bg-line"}`}>
+                      className={`flex flex-col items-center rounded-md px-1 py-2.5 transition-colors ${g === suggested ? "bg-ink text-paper hover:bg-ink-2" : "bg-paper-3 text-ink hover:bg-line"}`}>
                       <span className="text-sm font-semibold">{GRADE_NAMES[g]}</span>
                       <span className={`text-xs ${g === suggested ? "opacity-75" : "text-dim"}`}>{formatInterval(previews[g] - Date.now())}</span>
                     </button>
@@ -316,7 +316,7 @@ function SolveTime({ ms, last }: { ms: number; last: number | null }) {
   const faster = last !== null && ms < last;
   return (
     <p className="text-sm text-dim">
-      Solved in <span className="font-semibold text-boxwood tabular-nums">{s(ms)}</span>
+      Solved in <span className="font-semibold text-ink tabular-nums">{s(ms)}</span>
       {last !== null && <>, <span className={faster ? "text-good" : ""}>{s(last)} last time</span></>}
     </p>
   );

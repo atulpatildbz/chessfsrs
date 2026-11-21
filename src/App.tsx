@@ -47,7 +47,7 @@ function tokenUser(token: string | null): string | null {
 function Splash() {
   return (
     <div className="flex h-full items-center justify-center">
-      <Logo className="h-10 w-10 animate-pulse text-boxwood" />
+      <Logo className="h-10 w-10 animate-pulse text-ink" />
     </div>
   );
 }
@@ -70,7 +70,7 @@ function SignedIn() {
   if (live !== undefined && (live === null || !live.allowed))
     return (
       <div className="mx-auto flex h-full max-w-sm flex-col items-center justify-center gap-4 px-6 text-center">
-        <Logo className="h-10 w-10 text-boxwood" />
+        <Logo className="h-10 w-10 text-ink" />
         <p>This account isn't on the access list for this app.</p>
         <button className="btn btn-ghost" onClick={() => { forgetLocal(); void signOut(); }}>Sign out</button>
       </div>
@@ -93,10 +93,24 @@ function SignedIn() {
   return (
     <div className="flex h-full flex-col md:flex-row">
       <SyncEngine />
+      <ReadyMark />
       <Nav path={p} />
       <main className={`min-h-0 flex-1 overflow-y-auto scroll-thin md:pb-0 ${p.startsWith("/practice") ? "pb-[calc(3.5rem+env(safe-area-inset-bottom))]" : "pb-24"}`}>{page}</main>
     </div>
   );
+}
+
+/** Marks when the first frame with a real page in it is painted, for start-up timing (tests/e2e/perf-android.mjs). */
+function ReadyMark() {
+  useEffect(() => {
+    // A message posted from a frame callback runs after that frame is painted.
+    requestAnimationFrame(() => {
+      const c = new MessageChannel();
+      c.port1.onmessage = () => { if (!performance.getEntriesByName("app-ready").length) performance.mark("app-ready"); };
+      c.port2.postMessage(0);
+    });
+  }, []);
+  return null;
 }
 
 const NAV = [
@@ -116,21 +130,21 @@ function Nav({ path }: { path: string }) {
       {/* Desktop rail */}
       <nav className="hidden w-56 shrink-0 flex-col gap-0.5 border-r border-line px-3 py-6 md:flex">
         <button onClick={() => navigate("/")} className="mb-7 flex items-center gap-2.5 px-3 text-left">
-          <Logo className="h-6 w-6 text-boxwood" />
+          <Logo className="h-6 w-6 text-ink" />
           <span className="text-[1.05rem] font-semibold tracking-tight">chessfsrs</span>
         </button>
         {NAV.map(({ to, label, icon: Icon }) => (
-          <a key={to} href={`#${to}`} aria-current={active(to) ? "page" : undefined} className={`relative flex items-center gap-3 rounded-md px-3 py-2 text-[0.95rem] ${active(to) ? "bg-ebony-2 text-boxwood before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-boxwood" : "text-dim hover:text-boxwood"}`}>
+          <a key={to} href={`#${to}`} aria-current={active(to) ? "page" : undefined} className={`relative flex items-center gap-3 rounded-md px-3 py-2 text-[0.95rem] ${active(to) ? "bg-paper-2 text-ink before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-ink" : "text-dim hover:text-ink"}`}>
             <Icon size={18} strokeWidth={active(to) ? 2.4 : 1.8} />
             {label}
           </a>
         ))}
       </nav>
       {/* Mobile tab bar */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-line bg-ebony pb-[env(safe-area-inset-bottom)] md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-line bg-paper pb-[env(safe-area-inset-bottom)] md:hidden">
         {/* Five tabs fit a phone: Add lives in the Library header there, Settings on Home. */}
         {NAV.filter((n) => n.to !== "/settings" && n.to !== "/add").map(({ to, label, icon: Icon }) => (
-          <a key={to} href={`#${to}`} aria-current={active(to) ? "page" : undefined} className={`relative flex flex-1 flex-col items-center gap-0.5 py-2 text-[0.7rem] ${active(to) ? "text-boxwood before:absolute before:inset-x-1/4 before:-top-px before:h-0.5 before:rounded-full before:bg-boxwood" : "text-dim"}`}>
+          <a key={to} href={`#${to}`} aria-current={active(to) ? "page" : undefined} className={`relative flex flex-1 flex-col items-center gap-0.5 py-2 text-[0.7rem] ${active(to) ? "text-ink before:absolute before:inset-x-1/4 before:-top-px before:h-0.5 before:rounded-full before:bg-ink" : "text-dim"}`}>
             <Icon size={20} strokeWidth={active(to) ? 2.4 : 1.8} />
             {label}
           </a>

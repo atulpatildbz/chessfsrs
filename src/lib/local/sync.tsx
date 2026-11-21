@@ -20,7 +20,26 @@ export function SyncEngine() {
   useEffect(() => { if (pull && pull.userId === getLocal().me?.id) applyPull(pull); }, [pull]);
   useEffect(() => { if (settings) setSettings(settings); }, [settings]);
   useFlush(isAuthenticated);
+  usePrefetch(isAuthenticated);
   return null;
+}
+
+/**
+ * Pages built on server-side stats would wait for a round trip on first open. Fetch them once on a
+ * device that has no copy yet, shortly after start-up; after that the page opens from the copy and
+ * refreshes it live while open.
+ */
+function usePrefetch(isAuthenticated: boolean) {
+  const convex = useConvex();
+  useEffect(() => {
+    if (!isAuthenticated || getLocal().queries.has("patterns")) return;
+    const me = getLocal().me?.id;
+    let live = true;
+    const t = setTimeout(() => {
+      convex.query(api.stats.patterns, {}).then((v) => { if (live && v && getLocal().me?.id === me) cacheQuery("patterns", v); }, () => {});
+    }, 2_000);
+    return () => { live = false; clearTimeout(t); };
+  }, [isAuthenticated, convex]);
 }
 
 // Module-wide, so a remounted SyncEngine never sends an op that's already on its way, and the

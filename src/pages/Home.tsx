@@ -36,7 +36,7 @@ export function Home() {
   return (
     <div className="mx-auto max-w-5xl px-5 py-6 md:px-10 md:py-12">
       <header className="mb-8 flex items-center justify-between md:hidden">
-        <span className="flex items-center gap-2 font-semibold tracking-tight"><Logo className="h-5 w-5 text-boxwood" />chessfsrs</span>
+        <span className="flex items-center gap-2 font-semibold tracking-tight"><Logo className="h-5 w-5 text-ink" />chessfsrs</span>
         <a href="#/settings" className="text-sm text-dim">Settings</a>
       </header>
 
@@ -58,7 +58,7 @@ export function Home() {
         </section>
       ) : (
         <section className="grid items-start gap-8 md:grid-cols-[minmax(0,380px)_1fr] md:gap-12">
-          <a href="#/practice" tabIndex={-1} aria-hidden="true" className="order-2 mx-auto block w-full max-w-[min(100%,max(220px,calc(100dvh-26rem)))] md:order-none md:max-w-none">
+          <a href="#/practice" tabIndex={-1} aria-hidden="true" className="order-2 mx-auto block w-full max-w-[min(100%,max(220px,calc(100dvh-26rem-env(safe-area-inset-top))))] md:order-none md:max-w-none">
             {next ? (
               <MiniBoard fen={next.fen} orientation={next.solver === "w" ? "white" : "black"} />
             ) : soonest ? (
@@ -74,7 +74,7 @@ export function Home() {
                   {total} position{total === 1 ? "" : "s"}
                   <span className="block text-dim">to look at again.</span>
                 </h1>
-                <p className="prose-serif mt-5 max-w-md text-[#cdbf9f]"><FirstUp p={next} /></p>
+                <p className="prose-serif mt-5 max-w-md text-ink-soft"><FirstUp p={next} /></p>
                 <a className="btn btn-primary mt-6 flex w-full !justify-between !px-5 !py-3.5 text-base md:max-w-md" href="#/practice">
                   Start practice
                   <span className="text-sm font-medium opacity-60">{[q.due.length && `${q.due.length} review${q.due.length === 1 ? "" : "s"}`, q.fresh.length && `${q.fresh.length} new`].filter(Boolean).join(", ")}</span>
@@ -106,7 +106,7 @@ export function Home() {
       )}
 
       {d && counts.total > 0 && (
-        <section className="mt-14 min-w-0">
+        <section className="offscreen-lazy mt-14 min-w-0">
           <div className="mb-3 flex items-baseline justify-between">
             <h2 className="font-serif text-2xl">Last year</h2>
             <span className="text-sm text-dim">{d.totalReviews} review{d.totalReviews === 1 ? "" : "s"}</span>

@@ -93,6 +93,6 @@ const CHIP_ROW = "no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5 py-1 md:con
 
 function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
-    <button onClick={onClick} aria-pressed={on} className={`shrink-0 whitespace-nowrap rounded-md border px-3 py-1.5 text-sm transition-colors md:py-1 ${on ? "border-boxwood bg-boxwood text-ebony" : "border-line text-dim hover:text-boxwood"}`}>{children}</button>
+    <button onClick={onClick} aria-pressed={on} className={`shrink-0 whitespace-nowrap rounded-md border px-3 py-1.5 text-sm transition-colors md:py-1 ${on ? "border-ink bg-ink text-paper" : "border-line text-dim hover:text-ink"}`}>{children}</button>
   );
 }

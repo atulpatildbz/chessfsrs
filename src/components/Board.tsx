@@ -4,15 +4,16 @@ import { Chessground } from "@lichess-org/chessground";
 import type { Api } from "@lichess-org/chessground/api";
 import type { Config } from "@lichess-org/chessground/config";
 import type { Key } from "@lichess-org/chessground/types";
-import { Chess, SQUARES } from "chess.js";
+import { Chess } from "chess.js";
 
 export type BoardApi = Api;
 
 export function legalDests(chess: Chess): Map<Key, Key[]> {
+  // One move generation for the whole position (asking square by square repeats it 64 times).
   const dests = new Map<Key, Key[]>();
-  for (const s of SQUARES) {
-    const ms = chess.moves({ square: s, verbose: true });
-    if (ms.length) dests.set(s as Key, ms.map((m) => m.to as Key));
+  for (const m of chess.moves({ verbose: true })) {
+    const list = dests.get(m.from as Key);
+    if (list) { if (!list.includes(m.to as Key)) list.push(m.to as Key); } else dests.set(m.from as Key, [m.to as Key]);
   }
   return dests;
 }

@@ -30,8 +30,12 @@ const secs = (ms: number | null) => (ms === null ? "" : `${Math.round(ms / 1000)
 
 export function Patterns() {
   const d = useCachedQuery(api.stats.patterns, {}, "patterns");
-  if (d === undefined) return <div className="p-10 text-dim">Patterns load from the server. Open this page once while online to keep a copy for offline use.</div>;
-  if (d === null) return null;
+  if (!d) return (
+    <div className="mx-auto max-w-5xl px-5 py-6 md:px-10 md:py-10">
+      <h1 className="font-serif text-[2.1rem] leading-tight">Patterns</h1>
+      <p className="prose-serif mt-3 max-w-2xl text-dim" role="status">{d === null ? "" : navigator.onLine ? "Adding up your reviews…" : "Patterns come from the server. Open this page once while online to keep a copy for offline use."}</p>
+    </div>
+  );
 
   const rows = KEYS.map((k) => d.groups.find((g) => g.key === k)).filter((g): g is NonNullable<typeof g> => !!g && g.puzzles > 0);
   const rated = rows.filter((g) => g.reviews >= MIN_REVIEWS).map((g) => ({ ...g, recall: 1 - g.misses / g.reviews }));
@@ -61,9 +65,9 @@ export function Patterns() {
             {motifRows.map((g) => (
               <li key={g.key} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 py-3 md:grid-cols-[minmax(0,260px)_minmax(0,1fr)_auto]">
                 <a className="min-w-0 truncate underline-offset-[3px] hover:underline md:whitespace-normal" href={`#/library?q=${encodeURIComponent(g.key)}`}>{LABELS[g.key] ?? g.key}</a>
-                <span className={`text-right font-semibold tabular-nums md:order-3 ${overall !== null && g.recall < overall - 0.05 ? "text-blunder" : "text-boxwood"}`}>{pct(g.recall)}</span>
+                <span className={`text-right font-semibold tabular-nums md:order-3 ${overall !== null && g.recall < overall - 0.05 ? "text-blunder" : "text-ink"}`}>{pct(g.recall)}</span>
                 <div className="col-span-2 md:order-2 md:col-span-1">
-                  <div className="h-1.5 overflow-hidden rounded-full bg-ebony-3">
+                  <div className="h-1.5 overflow-hidden rounded-full bg-paper-3">
                     <div className={`h-full ${overall !== null && g.recall < overall - 0.05 ? "bg-blunder" : "bg-good"}`} style={{ width: pct(g.recall) }} />
                   </div>
                   <p className="mt-1 text-xs text-dim">{g.puzzles} puzzle{g.puzzles === 1 ? "" : "s"}, {g.reviews} reviews{g.avgSolveMs !== null ? `, ${secs(g.avgSolveMs)} to solve` : ""}</p>
@@ -82,7 +86,7 @@ export function Patterns() {
       </section>
 
       {games.total > 0 && (
-        <section className="mt-12">
+        <section className="offscreen-lazy mt-12">
           <h2 className="font-serif text-2xl">Where your games go wrong</h2>
           <p className="mt-1 text-sm text-dim">{games.total} missed moves found in your games.</p>
           <div className="mt-4 grid gap-6 md:grid-cols-2">
@@ -92,7 +96,7 @@ export function Patterns() {
                 {phases.map((p) => (
                   <li key={p.key} className="grid grid-cols-[100px_minmax(0,1fr)_2.5rem] items-center gap-3 text-sm">
                     <span>{LABELS[p.key]}</span>
-                    <div className="h-2 overflow-hidden rounded-full bg-ebony-3"><div className="h-full bg-[var(--sq-dark)]" style={{ width: `${(p.n / maxPhase) * 100}%` }} /></div>
+                    <div className="h-2 overflow-hidden rounded-full bg-paper-3"><div className="h-full bg-[var(--sq-dark)]" style={{ width: `${(p.n / maxPhase) * 100}%` }} /></div>
                     <span className="text-right tabular-nums text-dim">{p.n}</span>
                   </li>
                 ))}
@@ -110,7 +114,7 @@ export function Patterns() {
       )}
 
       {d.leeches.length > 0 && (
-        <section className="mt-12">
+        <section className="offscreen-lazy mt-12">
           <h2 className="font-serif text-2xl">Puzzles you keep missing</h2>
           <p className="mt-1 text-sm text-dim">Forgotten three times or more. Worth a slow look: write down what you miss in the puzzle's notes.</p>
           <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">

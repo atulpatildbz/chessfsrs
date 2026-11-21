@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Behind the status and navigation bars when the WebView doesn't draw under them: the app's light ground. -->
+    <color name="app_background">#F1E6CB</color>
+</resources>

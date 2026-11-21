@@ -1,14 +1,15 @@
 // Phone screenshots of every page and the main practice states, for eyeballing layout.
-//   TEST_PASSWORD=… node tests/e2e/shots.mjs outDir [deviceName]
+//   [COLOR_SCHEME=light] TEST_PASSWORD=… node tests/e2e/shots.mjs outDir [deviceName]
 import { chromium, webkit, devices } from "playwright";
 const BASE = process.env.BASE_URL ?? "http://localhost:5173/";
 const OUT = process.argv[2] ?? "test-results";
 const dev = process.argv[3] ?? "Pixel 7";
 const tag = dev.replace(/\s+/g, "");
 const browser = await (/iPhone/.test(dev) ? webkit : chromium).launch();
-const ctx = await browser.newContext({ ...devices[dev] });
+const scheme = process.env.COLOR_SCHEME ?? "dark";
+const ctx = await browser.newContext({ ...devices[dev], colorScheme: scheme });
 const page = await ctx.newPage();
-const shot = (n) => page.screenshot({ path: `${OUT}/${tag}-${n}.png` });
+const shot = (n) => page.screenshot({ path: `${OUT}/${tag}-${scheme}-${n}.png` });
 await page.goto(BASE);
 await shot("00-signin");
 await page.fill("input[name=email]", process.env.TEST_EMAIL ?? "test@chessfsrs.local");

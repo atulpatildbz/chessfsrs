@@ -6,6 +6,7 @@ import "./styles.css";
 import { App } from "./App";
 import { loadLocal } from "./lib/local/store";
 import { registerServiceWorker } from "./lib/pwa";
+import { initTheme } from "./lib/theme";
 
 const url = import.meta.env.VITE_CONVEX_URL as string | undefined;
 
@@ -42,6 +43,7 @@ class OfflineTolerantClient extends ConvexReactClient {
     super.clearAuth();
   }
 }
+initTheme();
 const root = createRoot(document.getElementById("root")!);
 
 if (!url) {

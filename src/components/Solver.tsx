@@ -32,6 +32,7 @@ export const Solver = forwardRef<SolverHandle, Props>(function Solver({ puzzle, 
   const [shake, setShake] = useState(false);
   const [promo, setPromo] = useState<{ from: string; to: string } | null>(null);
   const finished = useRef(false);
+  const resetPending = useRef(false); // a wrong move's red square is still showing
 
   const userTotal = useMemo(() => puzzle.moves.filter((_, i) => moverAt(puzzle.fen, i) === puzzle.solver).length, [puzzle]);
 
@@ -95,7 +96,7 @@ export const Solver = forwardRef<SolverHandle, Props>(function Solver({ puzzle, 
       later(() => {
         const m = playAuto();
         toUserTurn([m.from, m.to]);
-      }, 650);
+      }, 400); // long enough to take in the position before the move you answer
     } else toUserTurn();
   }, [emit, playAuto, puzzle, sync, toUserTurn]);
 
@@ -109,7 +110,8 @@ export const Solver = forwardRef<SolverHandle, Props>(function Solver({ puzzle, 
       setShake(true);
       emit("user", stats.current.mistakes >= 2 ? "wrong-again" : "wrong");
       cg.current?.set({ highlight: { custom: new Map([[to as Key, "wrong-sq"]]) }, movable: { color: undefined } });
-      later(() => { if (status.current === "user") sync(ply.current > 0 ? lastOf() : undefined); }, 550);
+      resetPending.current = true;
+      later(() => { resetPending.current = false; if (status.current === "user") sync(ply.current > 0 ? lastOf() : undefined); }, 550);
       return;
     }
     const m = chess.current.move(parseUci(uci));
@@ -191,6 +193,12 @@ export const Solver = forwardRef<SolverHandle, Props>(function Solver({ puzzle, 
   useImperativeHandle(ref, () => ({
     hint() {
       if (status.current !== "user") return;
+      // Clear a wrong move's red square now, or its pending reset would wipe the hint a moment later.
+      if (resetPending.current) {
+        clearTimers();
+        resetPending.current = false;
+        sync(ply.current > 0 ? lastOf() : undefined);
+      }
       const { from, to } = parseUci(puzzle.moves[ply.current]);
       if (hintLevel.current === 0) {
         hintLevel.current = 1;
@@ -231,9 +239,9 @@ export const Solver = forwardRef<SolverHandle, Props>(function Solver({ puzzle, 
         <Board config={initialConfig} onReady={(api) => { cg.current = api; }} />
         {promo && (
           <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/50" onClick={() => { setPromo(null); sync(lastOf()); }}>
-            <div className="pop flex gap-2 rounded-xl bg-ebony-2 p-3" onClick={(e) => e.stopPropagation()}>
+            <div className="pop flex gap-2 rounded-xl bg-paper-2 p-3" onClick={(e) => e.stopPropagation()}>
               {PROMO.map((p) => (
-                <button key={p} aria-label={`Promote to ${p}`} className="cg-wrap h-16 w-16 rounded-lg bg-[var(--sq-light)] hover:bg-boxwood-2"
+                <button key={p} aria-label={`Promote to ${p}`} className="cg-wrap h-16 w-16 rounded-lg bg-[var(--sq-light)] hover:bg-[#f7efdd]"
                   onClick={() => { const pr = promo; setPromo(null); applyUserMove(pr.from + pr.to + p); }}>
                   <piece className={`${colorName(puzzle.solver)} ${({ q: "queen", n: "knight", r: "rook", b: "bishop" })[p]}`} style={{ position: "relative", display: "block", width: "100%", height: "100%" }} />
                 </button>

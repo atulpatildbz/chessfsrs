@@ -6,13 +6,15 @@
 @import "@fontsource-variable/schibsted-grotesk/wght.css";
 
 @theme {
-  /* Ebony and boxwood: the two woods chess pieces are turned from. */
-  --color-ebony: #17120e;
-  --color-ebony-2: #211a14;
-  --color-ebony-3: #2e251d;
+  /* Ebony and boxwood, the two woods chess pieces are turned from. Dark: boxwood ink on ebony.
+     Light (below): ebony ink on boxwood. "paper" is the ground, "ink" the text and primary fill. */
+  --color-paper: #17120e;
+  --color-paper-2: #211a14;
+  --color-paper-3: #2e251d;
   --color-line: #3a2f25;
-  --color-boxwood: #eadfc6;
-  --color-boxwood-2: #f7efdd;
+  --color-ink: #eadfc6;
+  --color-ink-2: #f7efdd;
+  --color-ink-soft: #cdbf9f;
   --color-dim: #a8977c;
   /* Annotation marks: ? for the move you played, ! for the one that worked. */
   --color-blunder: #e0674c;
@@ -31,31 +33,48 @@
 
 :root {
   color-scheme: dark;
+  --shadow-board: 0 0 0 1px rgb(0 0 0 / 0.35), 0 18px 40px -18px rgb(0 0 0 / 0.7);
   /* Board squares, overridden per theme. */
   --sq-light: #e6cfa1;
   --sq-dark: #a87a4f;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-paper: #f1e6cb;
+  --color-paper-2: #e8dab8;
+  --color-paper-3: #dccaa2;
+  --color-line: #cfbb91;
+  --color-ink: #1f1813;
+  --color-ink-2: #000000;
+  --color-ink-soft: #3d3127;
+  --color-dim: #5e4d36;
+  --color-blunder: #9a321c;
+  --color-good: #3a5f24;
+  --shadow-board: 0 0 0 1px rgb(60 40 20 / 0.25), 0 16px 32px -18px rgb(60 40 20 / 0.55);
 }
 :root[data-board="felt"] { --sq-light: #e9e4cf; --sq-dark: #6e9168; }
 :root[data-board="slate"] { --sq-light: #dee3e6; --sq-dark: #8ca2ad; }
 :root[data-board="walnut"] { --sq-light: #e6cfa1; --sq-dark: #a87a4f; }
 
 html, body, #root { height: 100%; }
+/* Edge-to-edge (Android app on WebView 140+, installed web apps): keep clear of the status bar. */
+#root { padding-top: env(safe-area-inset-top); }
 body {
   margin: 0;
-  background: var(--color-ebony);
-  color: var(--color-boxwood);
+  background: var(--color-paper);
+  color: var(--color-ink);
   font-family: var(--font-sans);
   font-size: 15px;
   -webkit-tap-highlight-color: transparent;
   -webkit-font-smoothing: antialiased;
 }
 
-:focus-visible { outline: 2px solid var(--color-boxwood); outline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 2px; }
 
 .figurine { font-family: var(--font-figurine); font-variant-emoji: text; }
 
 /* ---------- Board ---------- */
-.board-frame { position: relative; width: 100%; aspect-ratio: 1; border-radius: 6px; overflow: hidden; box-shadow: 0 0 0 1px rgb(0 0 0 / 0.35), 0 18px 40px -18px rgb(0 0 0 / 0.7); }
+.board-frame { position: relative; width: 100%; aspect-ratio: 1; border-radius: 6px; overflow: hidden; box-shadow: var(--shadow-board); }
 .board-frame .cg-wrap { width: 100%; height: 100%; }
 cg-board {
   background-color: var(--sq-dark);
@@ -98,26 +117,28 @@ cg-board square.hint-sq { box-shadow: inset 0 0 0 2px rgb(23 18 14 / 0.7), inset
 /* ---------- Controls ---------- */
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; border-radius: 6px; padding: 0.65rem 1.05rem; font-weight: 600; font-size: 0.95rem; transition: background-color 0.15s, color 0.15s, border-color 0.15s; cursor: pointer; user-select: none; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.btn-primary { background: var(--color-boxwood); color: var(--color-ebony); }
-.btn-primary:hover:not(:disabled) { background: var(--color-boxwood-2); }
-.btn-ghost { background: transparent; color: var(--color-boxwood); border: 1px solid var(--color-line); }
-.btn-ghost:hover:not(:disabled) { background: var(--color-ebony-2); }
-.btn-quiet { background: var(--color-ebony-3); color: var(--color-boxwood); }
-.btn-quiet:hover:not(:disabled) { background: #3a2f25; }
-.field { width: 100%; background: var(--color-ebony); border: 1px solid var(--color-line); border-radius: 6px; padding: 0.6rem 0.75rem; color: var(--color-boxwood); }
-.field:focus { outline: none; border-color: var(--color-boxwood); }
+.btn-primary { background: var(--color-ink); color: var(--color-paper); }
+.btn-primary:hover:not(:disabled) { background: var(--color-ink-2); }
+.btn-ghost { background: transparent; color: var(--color-ink); border: 1px solid var(--color-line); }
+.btn-ghost:hover:not(:disabled) { background: var(--color-paper-2); }
+.btn-quiet { background: var(--color-paper-3); color: var(--color-ink); }
+.btn-quiet:hover:not(:disabled) { background: var(--color-line); }
+.field { width: 100%; background: var(--color-paper); border: 1px solid var(--color-line); border-radius: 6px; padding: 0.6rem 0.75rem; color: var(--color-ink); }
+.field:focus { outline: none; border-color: var(--color-ink); }
 @media (pointer: coarse) { .field { font-size: 16px; } }
-.field::placeholder { color: rgb(168 151 124 / 0.65); }
-.panel { background: var(--color-ebony-2); border-radius: 10px; }
+.field::placeholder { color: color-mix(in srgb, var(--color-dim) 65%, transparent); }
+.panel { background: var(--color-paper-2); border-radius: 10px; }
 /* Prose and move text: the book face. */
 .prose-serif { font-family: var(--font-serif); font-size: 1.0625rem; line-height: 1.5; font-variation-settings: "opsz" 16; }
-.link { color: var(--color-boxwood); text-decoration: underline; text-decoration-color: rgb(234 223 198 / 0.35); text-underline-offset: 3px; }
+.link { color: var(--color-ink); text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 35%, transparent); text-underline-offset: 3px; }
 .link:hover { text-decoration-color: currentColor; }
 /* Annotated moves: Bd6? in red pencil, Nd6! in green. */
 .mv-bad { color: var(--color-blunder); }
 .mv-bad::after { content: "?"; }
 .mv-good { color: var(--color-good); }
 .mv-good::after { content: "!"; }
+/* Sections that usually start below the fold: the browser skips drawing them until they scroll near. */
+.offscreen-lazy { content-visibility: auto; contain-intrinsic-size: auto 480px; }
 .kbd { font-size: 0.7rem; opacity: 0.55; font-weight: 500; }
 @media (pointer: coarse) { .no-scrollbar { scrollbar-width: none; } .no-scrollbar::-webkit-scrollbar { display: none; } }
 .scroll-thin { scrollbar-width: thin; scrollbar-color: var(--color-line) transparent; }

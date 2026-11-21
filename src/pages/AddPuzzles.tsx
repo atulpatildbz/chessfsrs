@@ -50,7 +50,7 @@ export function AddPuzzles() {
     <div className="mx-auto max-w-5xl px-5 py-6 md:px-10 md:py-10">
       <h1 className="font-serif text-[2.1rem] leading-tight">Add puzzles</h1>
       <p className="prose-serif mt-3 max-w-xl text-dim">
-        Paste one or more PGNs with a <code className="text-boxwood">[FEN]</code> header and the solution line. The side that plays the last move is the one you'll play; earlier moves by the other side are played for you.
+        Paste one or more PGNs with a <code className="text-ink">[FEN]</code> header and the solution line. The side that plays the last move is the one you'll play; earlier moves by the other side are played for you.
       </p>
 
       <div className="mt-6 grid gap-8 md:grid-cols-[1fr_minmax(0,340px)]">
@@ -67,7 +67,7 @@ export function AddPuzzles() {
             {result && (
               <span className="flex items-center gap-1.5 text-sm text-good">
                 <Check size={16} /> Added {result.added}{result.duplicates ? `, skipped ${result.duplicates} already in your library` : ""}.
-                <button className="ml-1 text-boxwood underline-offset-4 hover:underline" onClick={() => navigate("/practice")}>Practise now</button>
+                <button className="ml-1 text-ink underline-offset-4 hover:underline" onClick={() => navigate("/practice")}>Practise now</button>
               </span>
             )}
             {error && <span className="text-sm text-blunder">{error}</span>}

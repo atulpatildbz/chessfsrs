@@ -105,12 +105,12 @@ export function SignIn() {
         </div>
         <div>
           <div className="mb-8 flex items-center gap-3">
-            <Logo className="h-9 w-9 text-boxwood" />
+            <Logo className="h-9 w-9 text-ink" />
             <h1 className="font-serif text-[2.1rem] leading-tight">chessfsrs</h1>
           </div>
           <p className="mb-8 max-w-sm text-dim">Puzzles from your own games, brought back just before you'd forget them.</p>
           <div className="flex max-w-sm flex-col gap-3">
-            <button className="btn bg-boxwood text-ebony hover:bg-white" onClick={() => void google()} disabled={phase !== "idle"}>
+            <button className="btn btn-primary" onClick={() => void google()} disabled={phase !== "idle"}>
               <GoogleMark />
               {phase === "verifying" ? "Signing you in…" : "Continue with Google"}
             </button>

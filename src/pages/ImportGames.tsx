@@ -134,13 +134,13 @@ export function ImportGames() {
         <div className="flex flex-col gap-8">
         <fieldset disabled={running} className="flex flex-col gap-4">
           <label className="flex flex-col gap-1.5 text-sm text-dim">chess.com username
-            <input className="field text-boxwood" value={chesscom} onChange={(e) => setChesscom(e.target.value)} placeholder="Leave empty to skip" autoCapitalize="none" autoCorrect="off" />
+            <input className="field text-ink" value={chesscom} onChange={(e) => setChesscom(e.target.value)} placeholder="Leave empty to skip" autoCapitalize="none" autoCorrect="off" />
           </label>
           <label className="flex flex-col gap-1.5 text-sm text-dim">lichess username
-            <input className="field text-boxwood" value={lichess} onChange={(e) => setLichess(e.target.value)} placeholder="Leave empty to skip" autoCapitalize="none" autoCorrect="off" />
+            <input className="field text-ink" value={lichess} onChange={(e) => setLichess(e.target.value)} placeholder="Leave empty to skip" autoCapitalize="none" autoCorrect="off" />
           </label>
           <label className="flex flex-col gap-1.5 text-sm text-dim">New games to scan, per site
-            <select className="field text-boxwood" value={count} onChange={(e) => setCount(Number(e.target.value))}>
+            <select className="field text-ink" value={count} onChange={(e) => setCount(Number(e.target.value))}>
               {[5, 10, 20, 50, 100].map((n) => <option key={n} value={n}>{n}</option>)}
             </select>
           </label>
@@ -148,7 +148,7 @@ export function ImportGames() {
             <div className="mt-1.5 flex flex-wrap gap-2">
               {TCS.map(([v, l]) => (
                 <button key={v} type="button" onClick={() => setTcs(tcs.includes(v) ? tcs.filter((t) => t !== v) : [...tcs, v])}
-                  aria-pressed={tcs.includes(v)} className={`rounded-md border px-3 py-1 text-sm ${tcs.includes(v) ? "border-boxwood bg-boxwood text-ebony" : "border-line text-dim"}`}>{l}</button>
+                  aria-pressed={tcs.includes(v)} className={`rounded-md border px-3 py-1 text-sm ${tcs.includes(v) ? "border-ink bg-ink text-paper" : "border-line text-dim"}`}>{l}</button>
               ))}
             </div>
           </div>
@@ -156,7 +156,7 @@ export function ImportGames() {
             <div className="mt-1.5 grid grid-cols-3 gap-2">
               {STRENGTHS.map(([v, l, d]) => (
                 <button key={v} type="button" onClick={() => setStrength(v)} title={d}
-                  aria-pressed={strength === v} className={`rounded-md border px-2 py-2 text-sm ${strength === v ? "border-boxwood bg-boxwood text-ebony" : "border-line text-dim"}`}>{l}</button>
+                  aria-pressed={strength === v} className={`rounded-md border px-2 py-2 text-sm ${strength === v ? "border-ink bg-ink text-paper" : "border-line text-dim"}`}>{l}</button>
               ))}
             </div>
             <p className="mt-1.5 text-xs">{STRENGTHS.find((s) => s[0] === strength)![2]}</p>
@@ -178,14 +178,14 @@ export function ImportGames() {
           {(running || phase) && (
             <div ref={status} className="panel scroll-mt-4 p-5">
               <div className="flex items-center gap-2">
-                {running ? <Loader2 size={16} className="shrink-0 animate-spin text-boxwood" /> : <Check size={16} className="shrink-0 text-good" />}
+                {running ? <Loader2 size={16} className="shrink-0 animate-spin text-ink" /> : <Check size={16} className="shrink-0 text-good" />}
                 <p className="min-w-0 flex-1 truncate">{phase}</p>
                 {running && <button type="button" className="-my-2 -mr-2 shrink-0 px-3 py-2 text-sm text-dim underline-offset-4 hover:underline md:hidden" onClick={() => abort.current?.abort()}>Stop</button>}
               </div>
               {progress && (
                 <>
-                  <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-ebony-3">
-                    <div className="h-full bg-boxwood transition-[width] duration-300" style={{ width: `${((progress.game - 1 + progress.pos / Math.max(1, progress.positions)) / progress.games) * 100}%` }} />
+                  <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-paper-3">
+                    <div className="h-full bg-ink transition-[width] duration-300" style={{ width: `${((progress.game - 1 + progress.pos / Math.max(1, progress.positions)) / progress.games) * 100}%` }} />
                   </div>
                   <p className="mt-2 text-sm text-dim">Game {progress.game} of {progress.games}</p>
                 </>

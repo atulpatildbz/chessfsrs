@@ -145,6 +145,11 @@ depends on the server. Google refuses sign-in inside a WebView, so the app opens
     # offline practice, on a production build (the service worker only runs there):
     VITE_TEST_LOGIN=1 npx vite build --outDir dist-test && npx vite preview --outDir dist-test --port 4173 &
     TEST_PASSWORD=… node tests/e2e/offline.mjs out/
+    # speed: launch and tap-to-response times against budgets (fails when over), same build:
+    TEST_PASSWORD=… node tests/e2e/perf.mjs all     # desktop, Pixel 7 at 4x slower CPU, iPhone 13
+    # the same inside the Android app, plus cold starts (debug APK built with VITE_TEST_LOGIN=1 on
+    # an emulator or phone over adb):
+    TEST_PASSWORD=… node tests/e2e/perf-android.mjs
     npm run mine chesscom <username> 10 normal                    # mining in Node
 
 Layout: `lib/` is shared by the app and Convex (puzzle model, FSRS, mining, game fetching, UCI
