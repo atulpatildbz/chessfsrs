@@ -29,10 +29,15 @@ export function Library({ initialSearch = "" }: { initialSearch?: string }) {
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search names, tags, notes" className="field !pl-9 text-sm" />
         </label>
       </div>
-      <div className="mt-5 flex flex-wrap gap-2">
-        {SOURCES.map(([v, l]) => <Chip key={l} on={source === v} onClick={() => setSource(v)}>{l}</Chip>)}
-        <span className="mx-1 w-px self-stretch bg-line" />
-        {STATES.map(([v, l]) => <Chip key={l} on={state === v} onClick={() => setState(v)}>{l}</Chip>)}
+      {/* Phones: one swipeable row per filter. Wider: a single wrapping row. */}
+      <div className="mt-3 space-y-1 md:mt-5 md:flex md:flex-wrap md:gap-2 md:space-y-0">
+        <div className={CHIP_ROW}>
+          {SOURCES.map(([v, l]) => <Chip key={l} on={source === v} onClick={() => setSource(v)}>{l}</Chip>)}
+        </div>
+        <span className="mx-1 hidden w-px self-stretch bg-line md:block" />
+        <div className={CHIP_ROW}>
+          {STATES.map(([v, l]) => <Chip key={l} on={state === v} onClick={() => setState(v)}>{l}</Chip>)}
+        </div>
       </div>
 
       {status === "LoadingFirstPage" ? null : results.length === 0 ? (
@@ -61,8 +66,11 @@ export function Library({ initialSearch = "" }: { initialSearch?: string }) {
   );
 }
 
+// py-1 leaves room for the focus ring inside the scroller.
+const CHIP_ROW = "no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5 py-1 md:contents";
+
 function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
-    <button onClick={onClick} className={`rounded-full px-3 py-1 text-sm transition-colors ${on ? "bg-bone text-felt" : "bg-felt-2 text-sage hover:text-bone"}`}>{children}</button>
+    <button onClick={onClick} className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-sm transition-colors md:py-1 ${on ? "bg-bone text-felt" : "bg-felt-2 text-sage hover:text-bone"}`}>{children}</button>
   );
 }

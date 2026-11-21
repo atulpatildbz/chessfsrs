@@ -94,7 +94,9 @@ cg-board square.hint-sq { box-shadow: inset 0 0 0 4px var(--color-brass-2); }
 .btn-quiet:hover:not(:disabled) { background: var(--color-felt-3); }
 .field { width: 100%; background: var(--color-felt); border: 1px solid var(--color-line); border-radius: 10px; padding: 0.6rem 0.75rem; color: var(--color-bone); }
 .field:focus { outline: none; border-color: var(--color-brass); }
+@media (pointer: coarse) { .field { font-size: 16px; } }
 .field::placeholder { color: rgb(151 175 163 / 0.6); }
 .panel { background: var(--color-felt-2); border-radius: 14px; }
 .kbd { font-size: 0.7rem; opacity: 0.55; font-weight: 500; }
+@media (pointer: coarse) { .no-scrollbar { scrollbar-width: none; } .no-scrollbar::-webkit-scrollbar { display: none; } }
 .scroll-thin { scrollbar-width: thin; scrollbar-color: var(--color-line) transparent; }

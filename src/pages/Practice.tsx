@@ -218,35 +218,35 @@ function Trainer({ puzzle, graded, desiredRetention = 0.9, header, onGraded, onU
   })();
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-4 px-3 pb-6 pt-3 md:flex-row md:items-start md:gap-8 md:px-6 md:pt-6">
+    <div className="mx-auto flex max-w-6xl flex-col gap-3 px-3 pb-6 pt-2 md:flex-row md:items-start md:gap-8 md:px-6 md:pt-6">
       <div className="w-full md:w-auto md:flex-1">
-        <div className="mx-auto w-full md:max-w-[min(100%,calc(100dvh-3rem))]">
+        <div className="mx-auto w-full max-w-[min(100%,max(260px,calc(100dvh-16rem)))] md:max-w-[min(100%,calc(100dvh-3rem))]">
           <Solver ref={solver} puzzle={line} onStatus={onStatus} onFinish={onFinish} />
         </div>
       </div>
 
-      <aside className="flex w-full flex-col gap-4 md:w-[340px] md:shrink-0">
+      <aside className="flex w-full flex-col gap-3 md:w-[340px] md:shrink-0 md:gap-4">
         {header && <div className="px-1">{header}</div>}
 
-        <div className="panel p-5">
+        <div className="panel p-4 md:p-5">
           <div className="flex items-center gap-3">
             <span className={`h-4 w-4 shrink-0 rounded-full border ${puzzle.solver === "w" ? "border-bone bg-bone" : "border-sage bg-black"}`} aria-hidden />
-            <p className={`font-serif text-xl leading-snug ${prompt.tone}`} aria-live="polite">{prompt.text}</p>
+            <p className={`font-serif text-lg leading-snug md:text-xl ${prompt.tone}`} aria-live="polite">{prompt.text}</p>
           </div>
           {!done && userMoveIdx.length > 1 && (
-            <p className="mt-2 text-sm text-sage">{sideName(puzzle.solver)} to play · move {Math.min(userStep, userMoveIdx.length)} of {userMoveIdx.length}</p>
+            <p className="mt-1 text-sm text-sage md:mt-2">{sideName(puzzle.solver)} to play · move {Math.min(userStep, userMoveIdx.length)} of {userMoveIdx.length}</p>
           )}
-          {!done && userMoveIdx.length === 1 && status !== "intro" && <p className="mt-2 text-sm text-sage">{sideName(puzzle.solver)} to play</p>}
+          {!done && userMoveIdx.length === 1 && status !== "intro" && <p className="mt-1 text-sm text-sage md:mt-2">{sideName(puzzle.solver)} to play</p>}
 
           {!done && (
-            <div className="mt-5 flex gap-2">
+            <div className="mt-3 flex gap-2 md:mt-5">
               <button className="btn btn-quiet flex-1" onClick={() => solver.current?.hint()} disabled={status !== "user"}><Lightbulb size={16} /> Hint <span className="kbd hidden md:inline">H</span></button>
               <button className="btn btn-quiet flex-1" onClick={() => solver.current?.reveal()} disabled={status === "intro"}><Eye size={16} /> Solution <span className="kbd hidden md:inline">S</span></button>
             </div>
           )}
 
           {done && graded && previews && suggested && (
-            <div className="pop mt-5">
+            <div className="pop mt-3 md:mt-5">
               <div className="grid grid-cols-4 gap-2">
                 {([1, 2, 3, 4] as Grade[]).map((g) => (
                   <button key={g} disabled={submitting} onClick={() => void grade(g)}

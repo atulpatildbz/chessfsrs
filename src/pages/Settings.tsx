@@ -66,8 +66,8 @@ function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange:
   return (
     <label className="flex cursor-pointer items-center justify-between text-sm">
       <span>{label}</span>
-      <button role="switch" aria-checked={on} onClick={() => onChange(!on)} className={`relative h-6 w-11 rounded-full transition-colors ${on ? "bg-brass" : "bg-felt-3"}`}>
-        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-bone transition-transform ${on ? "translate-x-5" : "translate-x-0.5"}`} />
+      <button type="button" role="switch" aria-checked={on} onClick={() => onChange(!on)} className={`relative h-6 w-11 rounded-full transition-colors ${on ? "bg-brass" : "bg-felt-3"}`}>
+        <span className={`absolute left-0 top-0.5 h-5 w-5 rounded-full bg-bone transition-transform ${on ? "translate-x-5" : "translate-x-0.5"}`} />
       </button>
     </label>
   );

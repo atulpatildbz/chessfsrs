@@ -21,7 +21,7 @@ export function Home() {
 
   return (
     <div className="mx-auto max-w-5xl px-5 py-6 md:px-10 md:py-10">
-      <header className="mb-8 flex items-center justify-between md:hidden">
+      <header className="mb-6 flex items-center justify-between md:hidden">
         <span className="font-serif text-2xl">chessfsrs</span>
         <a href="#/settings" className="text-sm text-sage">Settings</a>
       </header>
@@ -41,8 +41,8 @@ export function Home() {
           </div>
         </section>
       ) : (
-        <section className="grid items-center gap-8 md:grid-cols-[minmax(0,400px)_1fr]">
-          <a href="#/practice" className="block transition-transform hover:scale-[1.01]" aria-label="Start practice">
+        <section className="grid items-center gap-6 md:grid-cols-[minmax(0,400px)_1fr] md:gap-8">
+          <a href="#/practice" tabIndex={-1} aria-hidden="true" className="order-2 mx-auto block w-full max-w-[min(100%,max(220px,calc(100dvh-22rem)))] transition-transform hover:scale-[1.01] md:order-none md:max-w-none" >
             {next ? (
               <MiniBoard fen={next.fen} orientation={next.solver === "w" ? "white" : "black"} />
             ) : d.soonest ? (
@@ -53,20 +53,20 @@ export function Home() {
               <MiniBoard fen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" orientation="white" />
             )}
           </a>
-          <div>
+          <div className="order-1 md:order-none">
             {next ? (
               <>
-                <h1 className="font-serif text-4xl leading-tight">
+                <h1 className="font-serif text-3xl leading-tight md:text-4xl">
                   {dueTotal + newToday} puzzle{dueTotal + newToday === 1 ? "" : "s"} for today
                 </h1>
                 <p className="mt-3 text-sage">
                   {dueTotal} to review{newToday ? `, ${newToday} new` : ""}. The first is {next.game ? `from your game vs ${next.solver === "w" ? next.game.black : next.game.white}` : `${sideName(next.solver)} to play`}.
                 </p>
-                <a className="btn btn-primary mt-6 !px-6 !py-3 text-base" href="#/practice">Start practice</a>
+                <a className="btn btn-primary mt-5 w-full !px-6 !py-3 text-base md:mt-6 md:w-auto" href="#/practice">Start practice</a>
               </>
             ) : (
               <>
-                <h1 className="font-serif text-4xl leading-tight">All caught up</h1>
+                <h1 className="font-serif text-3xl leading-tight md:text-4xl">All caught up</h1>
                 <p className="mt-3 text-sage">
                   {d.soonest ? `Next review ${relTime(d.soonest.dueAt, now)}.` : nextLabel(d)} Scan more games to keep the queue full of your own mistakes.
                 </p>

@@ -100,7 +100,7 @@ function Nav({ path }: { path: string }) {
         ))}
       </nav>
       {/* Mobile tab bar */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-line/60 bg-felt/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-line/60 bg-felt pb-[env(safe-area-inset-bottom)] md:hidden">
         {/* Five tabs fit a phone: Add lives in the Library header there, Settings on Home. */}
         {NAV.filter((n) => n.to !== "/settings" && n.to !== "/add").map(({ to, label, icon: Icon }) => (
           <a key={to} href={`#${to}`} className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[0.68rem] ${active(to) ? "text-brass" : "text-sage"}`}>
