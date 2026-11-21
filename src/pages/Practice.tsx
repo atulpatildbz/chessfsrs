@@ -217,80 +217,88 @@ function Trainer({ puzzle, graded, desiredRetention = 0.9, header, onGraded, onU
     return { text: game ? `Find the move you missed.` : `${sideName(puzzle.solver)} to play.`, tone: "text-bone" };
   })();
 
-  return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-3 px-3 pb-6 pt-2 md:flex-row md:items-start md:gap-8 md:px-6 md:pt-6">
-      <div className="w-full md:w-auto md:flex-1">
-        <div className="mx-auto w-full max-w-[min(100%,max(260px,calc(100dvh-16rem)))] md:max-w-[min(100%,calc(100dvh-3rem))]">
-          <Solver ref={solver} puzzle={line} onStatus={onStatus} onFinish={onFinish} />
+  const details = done && (
+    <div className="panel pop p-5 text-sm leading-relaxed">
+      <p className="figurine text-[0.95rem] text-bone">
+        {formatLine(puzzle.fen, san.map(figurine))}
+      </p>
+      {game && (
+        <div className="mt-4 space-y-1.5 text-sage">
+          <p>
+            In the game you played <b className="figurine font-semibold text-claret">{figurine(game.playedSan)}</b> ({formatEval(game.evalPlayed)}).
+            The only good move was <b className="figurine font-semibold text-moss">{figurine(game.bestSan)}</b> ({formatEval(game.evalBest, game.mate)}).
+          </p>
+          <p>{[`${game.white} vs ${game.black}`, game.timeClass, game.playedAt ? new Date(game.playedAt).toLocaleDateString() : ""].filter(Boolean).join(" · ")}</p>
         </div>
+      )}
+      {puzzle.notes && <p className="mt-3 whitespace-pre-wrap text-sage">{puzzle.notes}</p>}
+      <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
+        {game?.url && <a className="inline-flex items-center gap-1 text-brass hover:underline" href={game.url} target="_blank" rel="noreferrer">Open game <ExternalLink size={13} /></a>}
+        <a className="inline-flex items-center gap-1 text-brass hover:underline" href={`https://lichess.org/analysis/${puzzle.fen.replace(/ /g, "_")}?color=${puzzle.solver === "w" ? "white" : "black"}`} target="_blank" rel="noreferrer">Analyse on Lichess <ExternalLink size={13} /></a>
+        <a className="text-sage hover:text-bone hover:underline" href={`#/puzzle/${puzzle._id}`}>Edit notes</a>
       </div>
+    </div>
+  );
 
-      <aside className="flex w-full flex-col gap-3 md:w-[340px] md:shrink-0 md:gap-4">
-        {header && <div className="px-1">{header}</div>}
-
-        <div className="panel p-4 md:p-5">
-          <div className="flex items-center gap-3">
-            <span className={`h-4 w-4 shrink-0 rounded-full border ${puzzle.solver === "w" ? "border-bone bg-bone" : "border-sage bg-black"}`} aria-hidden />
-            <p className={`font-serif text-lg leading-snug md:text-xl ${prompt.tone}`} aria-live="polite">{prompt.text}</p>
+  return (
+    <div className="mx-auto max-w-6xl md:flex md:flex-row md:items-start md:gap-8 md:px-6 md:pb-6 md:pt-6">
+      {/* On a phone the first screen holds the stats, the board and the controls, with the board
+          centred in whatever height is left; the line and game details scroll in below it. */}
+      <div className="flex min-h-[calc(100dvh-3.5rem-env(safe-area-inset-bottom))] flex-col gap-3 py-3 md:contents">
+        {header && <div className="px-4 md:hidden">{header}</div>}
+        <div className="flex w-full flex-1 items-center md:block md:w-auto md:flex-1">
+          <div className="mx-auto w-full max-w-[min(100%,max(260px,calc(100dvh-22.5rem-env(safe-area-inset-bottom))))] md:max-w-[min(100%,calc(100dvh-3rem))]">
+            <Solver ref={solver} puzzle={line} onStatus={onStatus} onFinish={onFinish} />
           </div>
-          {!done && userMoveIdx.length > 1 && (
-            <p className="mt-1 text-sm text-sage md:mt-2">{sideName(puzzle.solver)} to play · move {Math.min(userStep, userMoveIdx.length)} of {userMoveIdx.length}</p>
-          )}
-          {!done && userMoveIdx.length === 1 && status !== "intro" && <p className="mt-1 text-sm text-sage md:mt-2">{sideName(puzzle.solver)} to play</p>}
-
-          {!done && (
-            <div className="mt-3 flex gap-2 md:mt-5">
-              <button className="btn btn-quiet flex-1" onClick={() => solver.current?.hint()} disabled={status !== "user"}><Lightbulb size={16} /> Hint <span className="kbd hidden md:inline">H</span></button>
-              <button className="btn btn-quiet flex-1" onClick={() => solver.current?.reveal()} disabled={status === "intro"}><Eye size={16} /> Solution <span className="kbd hidden md:inline">S</span></button>
-            </div>
-          )}
-
-          {done && graded && previews && suggested && (
-            <div className="pop mt-3 md:mt-5">
-              <div className="grid grid-cols-4 gap-2">
-                {([1, 2, 3, 4] as Grade[]).map((g) => (
-                  <button key={g} disabled={submitting} onClick={() => void grade(g)}
-                    className={`flex flex-col items-center rounded-xl px-1 py-2.5 transition-colors ${g === suggested ? "bg-brass text-[#1c1606] hover:bg-brass-2" : "bg-felt-3/60 text-bone hover:bg-felt-3"}`}>
-                    <span className="text-sm font-semibold">{GRADE_NAMES[g]}</span>
-                    <span className={`text-xs ${g === suggested ? "opacity-75" : "text-sage"}`}>{formatInterval(previews[g] - Date.now())}</span>
-                  </button>
-                ))}
-              </div>
-              {gradeError && <p className="mt-2 text-sm text-claret" role="alert">{gradeError}</p>}
-              <p className="mt-2.5 text-xs text-sage">{gradeReason(attempt!)} <span className="hidden md:inline">Space accepts, 1–4 to choose.</span></p>
-            </div>
-          )}
-          {done && (
-            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-              <button className="btn btn-ghost !py-1.5 text-sm" onClick={retry}><RotateCcw size={15} /> Play again</button>
-              {attempt && status === "solved" && attempt.mistakes === 0 && !attempt.revealed && attempt.hints === 0 && <SolveTime ms={attempt.ms} last={lastSolve.current?.ms ?? null} />}
-            </div>
-          )}
         </div>
 
-        {done && (
-          <div className="panel pop p-5 text-sm leading-relaxed">
-            <p className="figurine text-[0.95rem] text-bone">
-              {formatLine(puzzle.fen, san.map(figurine))}
-            </p>
-            {game && (
-              <div className="mt-4 space-y-1.5 text-sage">
-                <p>
-                  In the game you played <b className="figurine font-semibold text-claret">{figurine(game.playedSan)}</b> ({formatEval(game.evalPlayed)}).
-                  The only good move was <b className="figurine font-semibold text-moss">{figurine(game.bestSan)}</b> ({formatEval(game.evalBest, game.mate)}).
-                </p>
-                <p>{[`${game.white} vs ${game.black}`, game.timeClass, game.playedAt ? new Date(game.playedAt).toLocaleDateString() : ""].filter(Boolean).join(" · ")}</p>
+        <aside className="flex w-full flex-col gap-3 px-3 md:w-[340px] md:shrink-0 md:gap-4 md:px-0">
+          {header && <div className="hidden px-1 md:block">{header}</div>}
+
+          <div className="panel flex min-h-[14rem] flex-col p-4 md:block md:min-h-0 md:p-5">
+            <div className="flex items-center gap-3">
+              <span className={`h-4 w-4 shrink-0 rounded-full border ${puzzle.solver === "w" ? "border-bone bg-bone" : "border-sage bg-black"}`} aria-hidden />
+              <p className={`font-serif text-lg leading-snug md:text-xl ${prompt.tone}`} aria-live="polite">{prompt.text}</p>
+            </div>
+            {!done && userMoveIdx.length > 1 && (
+              <p className="mt-1 text-sm text-sage md:mt-2">{sideName(puzzle.solver)} to play · move {Math.min(userStep, userMoveIdx.length)} of {userMoveIdx.length}</p>
+            )}
+            {!done && userMoveIdx.length === 1 && status !== "intro" && <p className="mt-1 text-sm text-sage md:mt-2">{sideName(puzzle.solver)} to play</p>}
+
+            {!done && (
+              <div className="mt-auto flex gap-2 pt-3 md:mt-5 md:pt-0">
+                <button className="btn btn-quiet flex-1" onClick={() => solver.current?.hint()} disabled={status !== "user"}><Lightbulb size={16} /> Hint <span className="kbd hidden md:inline">H</span></button>
+                <button className="btn btn-quiet flex-1" onClick={() => solver.current?.reveal()} disabled={status === "intro"}><Eye size={16} /> Solution <span className="kbd hidden md:inline">S</span></button>
               </div>
             )}
-            {puzzle.notes && <p className="mt-3 whitespace-pre-wrap text-sage">{puzzle.notes}</p>}
-            <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
-              {game?.url && <a className="inline-flex items-center gap-1 text-brass hover:underline" href={game.url} target="_blank" rel="noreferrer">Open game <ExternalLink size={13} /></a>}
-              <a className="inline-flex items-center gap-1 text-brass hover:underline" href={`https://lichess.org/analysis/${puzzle.fen.replace(/ /g, "_")}?color=${puzzle.solver === "w" ? "white" : "black"}`} target="_blank" rel="noreferrer">Analyse on Lichess <ExternalLink size={13} /></a>
-              <a className="text-sage hover:text-bone hover:underline" href={`#/puzzle/${puzzle._id}`}>Edit notes</a>
-            </div>
+
+            {done && graded && previews && suggested && (
+              <div className="pop mt-3 md:mt-5">
+                <div className="grid grid-cols-4 gap-2">
+                  {([1, 2, 3, 4] as Grade[]).map((g) => (
+                    <button key={g} disabled={submitting} onClick={() => void grade(g)}
+                      className={`flex flex-col items-center rounded-xl px-1 py-2.5 transition-colors ${g === suggested ? "bg-brass text-[#1c1606] hover:bg-brass-2" : "bg-felt-3/60 text-bone hover:bg-felt-3"}`}>
+                      <span className="text-sm font-semibold">{GRADE_NAMES[g]}</span>
+                      <span className={`text-xs ${g === suggested ? "opacity-75" : "text-sage"}`}>{formatInterval(previews[g] - Date.now())}</span>
+                    </button>
+                  ))}
+                </div>
+                {gradeError && <p className="mt-2 text-sm text-claret" role="alert">{gradeError}</p>}
+                <p className="mt-2.5 text-xs text-sage">{gradeReason(attempt!)} <span className="hidden md:inline">Space accepts, 1–4 to choose.</span></p>
+              </div>
+            )}
+            {done && (
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+                <button className="btn btn-ghost !py-1.5 text-sm" onClick={retry}><RotateCcw size={15} /> Play again</button>
+                {attempt && status === "solved" && attempt.mistakes === 0 && !attempt.revealed && attempt.hints === 0 && <SolveTime ms={attempt.ms} last={lastSolve.current?.ms ?? null} />}
+              </div>
+            )}
           </div>
-        )}
-      </aside>
+
+          {details && <div className="hidden md:block">{details}</div>}
+        </aside>
+      </div>
+      {details && <div className="px-3 pb-4 md:hidden">{details}</div>}
     </div>
   );
 }

@@ -67,7 +67,7 @@ function SignedIn() {
   return (
     <div className="flex h-full flex-col md:flex-row">
       <Nav path={p} />
-      <main className="min-h-0 flex-1 overflow-y-auto scroll-thin pb-24 md:pb-0">{page}</main>
+      <main className={`min-h-0 flex-1 overflow-y-auto scroll-thin md:pb-0 ${p.startsWith("/practice") ? "pb-[calc(3.5rem+env(safe-area-inset-bottom))]" : "pb-24"}`}>{page}</main>
     </div>
   );
 }
