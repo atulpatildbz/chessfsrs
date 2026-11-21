@@ -4,6 +4,7 @@ import { Check, Loader2, X } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { useLocal } from "../lib/local/store";
 import { useOffline } from "../lib/local/sync";
+import { useHoldUpdates } from "../lib/pwa";
 import { fetchChesscomGames, fetchLichessGames, type GameRecord, type Site, type TimeClass } from "../../lib/games";
 import { minePuzzles, toPuzzleInput, type MinedPuzzle, type Strength } from "../../lib/mining";
 import { createEngine } from "../lib/engine";
@@ -33,6 +34,7 @@ export function ImportGames() {
   const [tcs, setTcs] = useState<TimeClass[]>(["blitz", "rapid", "classical"]);
   const [strength, setStrength] = useState<Strength>("normal");
   const [running, setRunning] = useState(false);
+  useHoldUpdates(running); // a scan in progress
   const [phase, setPhase] = useState("");
   const [progress, setProgress] = useState<{ game: number; games: number; pos: number; positions: number } | null>(null);
   const [logs, setLogs] = useState<Log[]>([]);

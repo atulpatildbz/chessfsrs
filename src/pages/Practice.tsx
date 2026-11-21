@@ -12,6 +12,7 @@ import { formatLine, lichessAnalysisUrl, moverAt, sanLine } from "../../lib/puzz
 import { figurine, formatEval, sideName } from "../lib/notation";
 import { startOfToday, useNow } from "../lib/time";
 import { navigate } from "../lib/router";
+import { useHoldUpdates } from "../lib/pwa";
 
 type PracticePuzzle = LocalPuzzle;
 const DEFAULT_NEW_PER_DAY = 15;
@@ -178,6 +179,10 @@ function Trainer({ puzzle: initial, graded, desiredRetention = 0.9, header, onGr
   const previews = useMemo(() => (attempt && graded ? preview(puzzle.card, puzzle._id, Date.now(), desiredRetention) : null), [attempt, graded, puzzle, desiredRetention]);
   const userMoveIdx = useMemo(() => puzzle.moves.map((_, i) => i).filter((i) => moverAt(puzzle.fen, i) === puzzle.solver), [puzzle]);
   const userStep = userMoveIdx.filter((i) => i < ply).length + (done ? 0 : 1);
+  // Once you've touched the puzzle (a move, a miss, a hint) or it's waiting for a grade, a new version waits.
+  const [hinted, setHinted] = useState(false);
+  useHoldUpdates(ply > (userMoveIdx[0] ?? 0) || feedback !== "none" || hinted || attempt !== null);
+  const hint = () => { setHinted(true); solver.current?.hint(); };
 
   const onStatus = useCallback((s: SolverStatus, p: number, fb: Feedback) => { setStatus(s); setPly(p); setFeedback(fb); }, []);
   const onFinish = useCallback((a: Attempt) => setAttempt((prev) => prev ?? a), []);
@@ -200,7 +205,7 @@ function Trainer({ puzzle: initial, graded, desiredRetention = 0.9, header, onGr
     const on = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.metaKey || e.ctrlKey) return;
       const k = e.key.toLowerCase();
-      if (k === "h") solver.current?.hint();
+      if (k === "h") hint();
       else if (k === "s") solver.current?.reveal();
       else if (k === "r" && done) retry();
       else if (k === "u" && onUndo) onUndo();
@@ -276,7 +281,7 @@ function Trainer({ puzzle: initial, graded, desiredRetention = 0.9, header, onGr
 
             {!done && (
               <div className="mt-auto flex gap-2 pt-3 md:mt-5 md:pt-0">
-                <button className="btn btn-quiet flex-1" onClick={() => solver.current?.hint()} disabled={status !== "user"}><Lightbulb size={16} /> Hint <span className="kbd hidden md:inline">H</span></button>
+                <button className="btn btn-quiet flex-1" onClick={hint} disabled={status !== "user"}><Lightbulb size={16} /> Hint <span className="kbd hidden md:inline">H</span></button>
                 <button className="btn btn-quiet flex-1" onClick={() => solver.current?.reveal()} disabled={status === "intro"}><Eye size={16} /> Solution <span className="kbd hidden md:inline">S</span></button>
               </div>
             )}

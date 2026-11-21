@@ -4,7 +4,7 @@ import { ConvexReactClient } from "convex/react";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import "./styles.css";
 import { App } from "./App";
-import { loadLocal } from "./lib/local/store";
+import { loadLocal, writesSettled } from "./lib/local/store";
 import { registerServiceWorker } from "./lib/pwa";
 import { initTheme } from "./lib/theme";
 
@@ -50,9 +50,13 @@ if (!url) {
   root.render(<p style={{ padding: 24 }}>Missing VITE_CONVEX_URL. Run <code>npx convex dev</code> first.</p>);
 } else {
   void loadLocal();
-  registerServiceWorker();
   // Offline grades wait in IndexedDB, so a mutation held during a disconnect is safe: no "leave page?" prompt.
   const convex = new OfflineTolerantClient(url, { unsavedChangesWarning: false });
+  // A new version's reload first lets local writes and in-flight saves (a username edit) finish.
+  registerServiceWorker(async () => {
+    await writesSettled();
+    while (convex.connectionState().hasInflightRequests) await new Promise((r) => setTimeout(r, 100));
+  });
   root.render(
     <StrictMode>
       {/* SignIn handles ?code= itself so it can show "not on the access list". */}

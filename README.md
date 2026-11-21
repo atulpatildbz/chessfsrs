@@ -147,6 +147,8 @@ depends on the server. Google refuses sign-in inside a WebView, so the app opens
     TEST_PASSWORD=… node tests/e2e/offline.mjs out/
     # speed: launch and tap-to-response times against budgets (fails when over), same build:
     TEST_PASSWORD=… node tests/e2e/perf.mjs all     # desktop, Pixel 7 at 4x slower CPU, iPhone 13
+    # new versions reach tabs left open, never mid-puzzle (same build; serves its own copy):
+    TEST_PASSWORD=… node tests/e2e/pwa-update.mjs
     # the same inside the Android app, plus cold starts (debug APK built with VITE_TEST_LOGIN=1 on
     # an emulator or phone over adb):
     TEST_PASSWORD=… node tests/e2e/perf-android.mjs

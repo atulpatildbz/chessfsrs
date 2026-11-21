@@ -33,6 +33,8 @@ const set = (patch: Partial<State>) => { state = { ...state, ...patch }; emit();
 // IndexedDB writes run one after another, so a later write never lands before an earlier one.
 let chain: Promise<unknown> = Promise.resolve();
 const persist = (f: () => Promise<unknown>) => { chain = chain.then(f).catch((e) => console.error("local store write failed", e)); };
+/** Resolves once every write made so far has landed. */
+export const writesSettled = () => chain;
 
 // Outbox keys sort in the order the ops were made.
 let seq = 0;

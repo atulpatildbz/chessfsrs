@@ -13,14 +13,16 @@ export default defineConfig({
       // The Android build bundles its files and registers no worker (src/lib/pwa.ts).
       injectRegister: false,
       disable: process.env.BASE_PATH === "./",
-      // A new version waits in the background and takes over on the next launch, never mid-puzzle.
-      registerType: "prompt",
+      // A new version takes over at once; open pages reload at a safe moment (src/lib/pwa.ts).
+      registerType: "autoUpdate",
       manifest: false, // public/manifest.webmanifest
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png,woff2,webmanifest}"],
         // Stockfish is only for scanning games, which needs the network anyway.
         globIgnores: ["engine/**"],
         navigateFallback: "index.html",
+        skipWaiting: true,
+        clientsClaim: true,
         maximumFileSizeToCacheInBytes: 3_000_000,
       },
     }),
