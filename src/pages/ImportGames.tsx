@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { useConvex, useMutation, useQuery } from "convex/react";
+import { useConvex, useConvexAuth, useMutation } from "convex/react";
 import { Check, Loader2, X } from "lucide-react";
 import { api } from "../../convex/_generated/api";
+import { useLocal } from "../lib/local/store";
+import { useOffline } from "../lib/local/sync";
 import { fetchChesscomGames, fetchLichessGames, type GameRecord, type Site, type TimeClass } from "../../lib/games";
 import { minePuzzles, toPuzzleInput, type MinedPuzzle, type Strength } from "../../lib/mining";
 import { createEngine } from "../lib/engine";
@@ -18,7 +20,9 @@ const STRENGTHS: [Strength, string, string][] = [
 type Log = { game: GameRecord; found: number; error?: string };
 
 export function ImportGames() {
-  const settings = useQuery(api.settings.get);
+  const settings = useLocal().settings;
+  const { isAuthenticated } = useConvexAuth();
+  const offline = useOffline() || !isAuthenticated;
   const updateSettings = useMutation(api.settings.update);
   const saveAnalysis = useMutation(api.games.saveAnalysis);
   const convex = useConvex();
@@ -121,38 +125,38 @@ export function ImportGames() {
 
   return (
     <div className="mx-auto max-w-5xl px-5 py-6 md:px-10 md:py-10">
-      <h1 className="font-serif text-3xl">Puzzles from your games</h1>
-      <p className="mt-2 max-w-2xl text-sage">
+      <h1 className="font-serif text-[2.1rem] leading-tight">Puzzles from your games</h1>
+      <p className="prose-serif mt-3 max-w-2xl text-dim">
         Stockfish goes through your recent games on this device and looks for positions where only one move held and you played something else. Each becomes a puzzle starting just before your opponent's move. Games already scanned are skipped.
       </p>
 
       <div className="mt-8 grid gap-8 md:grid-cols-[minmax(0,360px)_1fr]">
         <div className="flex flex-col gap-8">
         <fieldset disabled={running} className="flex flex-col gap-4">
-          <label className="flex flex-col gap-1.5 text-sm text-sage">chess.com username
-            <input className="field text-bone" value={chesscom} onChange={(e) => setChesscom(e.target.value)} placeholder="Leave empty to skip" autoCapitalize="none" autoCorrect="off" />
+          <label className="flex flex-col gap-1.5 text-sm text-dim">chess.com username
+            <input className="field text-boxwood" value={chesscom} onChange={(e) => setChesscom(e.target.value)} placeholder="Leave empty to skip" autoCapitalize="none" autoCorrect="off" />
           </label>
-          <label className="flex flex-col gap-1.5 text-sm text-sage">lichess username
-            <input className="field text-bone" value={lichess} onChange={(e) => setLichess(e.target.value)} placeholder="Leave empty to skip" autoCapitalize="none" autoCorrect="off" />
+          <label className="flex flex-col gap-1.5 text-sm text-dim">lichess username
+            <input className="field text-boxwood" value={lichess} onChange={(e) => setLichess(e.target.value)} placeholder="Leave empty to skip" autoCapitalize="none" autoCorrect="off" />
           </label>
-          <label className="flex flex-col gap-1.5 text-sm text-sage">New games to scan, per site
-            <select className="field text-bone" value={count} onChange={(e) => setCount(Number(e.target.value))}>
+          <label className="flex flex-col gap-1.5 text-sm text-dim">New games to scan, per site
+            <select className="field text-boxwood" value={count} onChange={(e) => setCount(Number(e.target.value))}>
               {[5, 10, 20, 50, 100].map((n) => <option key={n} value={n}>{n}</option>)}
             </select>
           </label>
-          <div className="text-sm text-sage">Time controls
+          <div className="text-sm text-dim">Time controls
             <div className="mt-1.5 flex flex-wrap gap-2">
               {TCS.map(([v, l]) => (
                 <button key={v} type="button" onClick={() => setTcs(tcs.includes(v) ? tcs.filter((t) => t !== v) : [...tcs, v])}
-                  className={`rounded-full px-3 py-1 text-sm ${tcs.includes(v) ? "bg-bone text-felt" : "bg-felt-2 text-sage"}`}>{l}</button>
+                  aria-pressed={tcs.includes(v)} className={`rounded-md border px-3 py-1 text-sm ${tcs.includes(v) ? "border-boxwood bg-boxwood text-ebony" : "border-line text-dim"}`}>{l}</button>
               ))}
             </div>
           </div>
-          <div className="text-sm text-sage">Depth
+          <div className="text-sm text-dim">Depth
             <div className="mt-1.5 grid grid-cols-3 gap-2">
               {STRENGTHS.map(([v, l, d]) => (
                 <button key={v} type="button" onClick={() => setStrength(v)} title={d}
-                  className={`rounded-lg px-2 py-2 text-sm ${strength === v ? "bg-bone text-felt" : "bg-felt-2 text-sage"}`}>{l}</button>
+                  aria-pressed={strength === v} className={`rounded-md border px-2 py-2 text-sm ${strength === v ? "border-boxwood bg-boxwood text-ebony" : "border-line text-dim"}`}>{l}</button>
               ))}
             </div>
             <p className="mt-1.5 text-xs">{STRENGTHS.find((s) => s[0] === strength)![2]}</p>
@@ -163,9 +167,10 @@ export function ImportGames() {
             {running ? (
               <button type="button" className="btn btn-ghost" onClick={() => abort.current?.abort()}><X size={16} /> Stop</button>
             ) : (
-              <button type="button" className="btn btn-primary" onClick={run}>Scan games</button>
+              <button type="button" className="btn btn-primary" onClick={run} disabled={offline}>Scan games</button>
             )}
-            {error && <p className="text-sm text-claret">{error}</p>}
+            {offline && !running && <p className="text-sm text-dim">Scanning needs a connection to fetch your games.</p>}
+            {error && <p className="text-sm text-blunder">{error}</p>}
           </div>
         </div>
 
@@ -173,19 +178,19 @@ export function ImportGames() {
           {(running || phase) && (
             <div ref={status} className="panel scroll-mt-4 p-5">
               <div className="flex items-center gap-2">
-                {running ? <Loader2 size={16} className="shrink-0 animate-spin text-brass" /> : <Check size={16} className="shrink-0 text-moss" />}
+                {running ? <Loader2 size={16} className="shrink-0 animate-spin text-boxwood" /> : <Check size={16} className="shrink-0 text-good" />}
                 <p className="min-w-0 flex-1 truncate">{phase}</p>
-                {running && <button type="button" className="-my-2 -mr-2 shrink-0 px-3 py-2 text-sm text-sage underline-offset-4 hover:underline md:hidden" onClick={() => abort.current?.abort()}>Stop</button>}
+                {running && <button type="button" className="-my-2 -mr-2 shrink-0 px-3 py-2 text-sm text-dim underline-offset-4 hover:underline md:hidden" onClick={() => abort.current?.abort()}>Stop</button>}
               </div>
               {progress && (
                 <>
-                  <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-felt-3">
-                    <div className="h-full bg-brass transition-[width] duration-300" style={{ width: `${((progress.game - 1 + progress.pos / Math.max(1, progress.positions)) / progress.games) * 100}%` }} />
+                  <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-ebony-3">
+                    <div className="h-full bg-boxwood transition-[width] duration-300" style={{ width: `${((progress.game - 1 + progress.pos / Math.max(1, progress.positions)) / progress.games) * 100}%` }} />
                   </div>
-                  <p className="mt-2 text-sm text-sage">Game {progress.game} of {progress.games}</p>
+                  <p className="mt-2 text-sm text-dim">Game {progress.game} of {progress.games}</p>
                 </>
               )}
-              {logs.length > 0 && <p className="mt-3 text-sm">{totalFound} new puzzle{totalFound === 1 ? "" : "s"} from {logs.length} game{logs.length === 1 ? "" : "s"}.{!running && totalFound > 0 && <a className="ml-2 text-brass hover:underline" href="#/practice">Practise them</a>}</p>}
+              {logs.length > 0 && <p className="mt-3 text-sm">{totalFound} new puzzle{totalFound === 1 ? "" : "s"} from {logs.length} game{logs.length === 1 ? "" : "s"}.{!running && totalFound > 0 && <a className="link ml-2" href="#/practice">Practise them</a>}</p>}
             </div>
           )}
 
@@ -195,20 +200,20 @@ export function ImportGames() {
                 <div key={i} className="pop">
                   <MiniBoard fen={p.fen} orientation={p.solver === "w" ? "white" : "black"} />
                   <p className="figurine mt-1.5 truncate text-sm">{p.moveLabel.replace(p.playedSan, figurine(p.playedSan))}</p>
-                  <p className="text-xs text-sage">vs {p.solver === "w" ? p.black : p.white}</p>
+                  <p className="text-xs text-dim">vs {p.solver === "w" ? p.black : p.white}</p>
                 </div>
               ))}
             </div>
           )}
 
           {logs.some((l) => l.error) && (
-            <ul className="mt-6 space-y-1 text-sm text-claret">
+            <ul className="mt-6 space-y-1 text-sm text-blunder">
               {logs.filter((l) => l.error).map((l, i) => <li key={i}>{l.game.url}: {l.error}</li>)}
             </ul>
           )}
 
           {!running && !phase && (
-            <div className="text-sm text-sage">
+            <div className="text-sm text-dim">
               <p>What makes a good puzzle here:</p>
               <ul className="mt-2 list-disc space-y-1 pl-5">
                 <li>Only one move kept your position; the second-best was clearly worse.</li>

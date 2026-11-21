@@ -105,17 +105,17 @@ export function SignIn() {
         </div>
         <div>
           <div className="mb-8 flex items-center gap-3">
-            <Logo className="h-9 w-9 text-brass" />
-            <h1 className="font-serif text-3xl">chessfsrs</h1>
+            <Logo className="h-9 w-9 text-boxwood" />
+            <h1 className="font-serif text-[2.1rem] leading-tight">chessfsrs</h1>
           </div>
-          <p className="mb-8 max-w-sm text-sage">Puzzles from your own games, brought back just before you'd forget them.</p>
+          <p className="mb-8 max-w-sm text-dim">Puzzles from your own games, brought back just before you'd forget them.</p>
           <div className="flex max-w-sm flex-col gap-3">
-            <button className="btn bg-bone text-felt hover:bg-white" onClick={() => void google()} disabled={phase !== "idle"}>
+            <button className="btn bg-boxwood text-ebony hover:bg-white" onClick={() => void google()} disabled={phase !== "idle"}>
               <GoogleMark />
               {phase === "verifying" ? "Signing you in…" : "Continue with Google"}
             </button>
-            {error && <p className="text-sm text-claret" role="alert">{error}</p>}
-            {import.meta.env.DEV && <DevPasswordForm onError={setError} />}
+            {error && <p className="text-sm text-blunder" role="alert">{error}</p>}
+            {(import.meta.env.DEV || import.meta.env.VITE_TEST_LOGIN === "1") && <DevPasswordForm onError={setError} />}
           </div>
         </div>
       </div>
@@ -138,7 +138,7 @@ function DevPasswordForm({ onError }: { onError: (e: string | null) => void }) {
   }
   return (
     <form onSubmit={submit} className="mt-6 flex flex-col gap-2 border-t border-line pt-4">
-      <p className="text-xs text-sage">Dev test account</p>
+      <p className="text-xs text-dim">Dev test account</p>
       <input name="email" type="email" placeholder="test@chessfsrs.local" required className="field" />
       <input name="password" type="password" placeholder="Password" required className="field" />
       <button className="btn btn-ghost">Sign in with password</button>

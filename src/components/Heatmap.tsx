@@ -20,7 +20,7 @@ export function Heatmap({ perDay, todayIndex }: { perDay: { day: number; n: numb
   }, [weeks.length]); // not on every data refresh, or scrolling back to older weeks snaps away
 
   const level = (n: number) => (n === 0 ? 0 : n <= max * 0.25 ? 1 : n <= max * 0.5 ? 2 : n <= max * 0.75 ? 3 : 4);
-  const fills = ["bg-felt-3/50", "bg-brass/30", "bg-brass/55", "bg-brass/80", "bg-brass-2"];
+  const fills = ["bg-ebony-3/50", "bg-boxwood/30", "bg-boxwood/55", "bg-boxwood/80", "bg-boxwood-2"];
 
   return (
     <div ref={scroller} className="overflow-x-auto scroll-thin pb-1">
@@ -29,7 +29,7 @@ export function Heatmap({ perDay, todayIndex }: { perDay: { day: number; n: numb
           <div key={i} className="flex flex-col gap-[3px]">
             {w.map((c) => (
               <div key={c.day} title={c.day > todayIndex ? "" : `${new Date(c.day * 86_400_000).toLocaleDateString(undefined, { timeZone: "UTC", month: "short", day: "numeric" })}: ${c.n} review${c.n === 1 ? "" : "s"}`}
-                className={`h-[11px] w-[11px] rounded-[2px] ${c.day > todayIndex ? "opacity-0" : fills[level(c.n)]} ${c.day === todayIndex ? "ring-1 ring-bone/60" : ""}`} />
+                className={`h-[11px] w-[11px] rounded-[2px] ${c.day > todayIndex ? "opacity-0" : fills[level(c.n)]} ${c.day === todayIndex ? "ring-1 ring-boxwood/60" : ""}`} />
             ))}
           </div>
         ))}

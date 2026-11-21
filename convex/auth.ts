@@ -27,6 +27,8 @@ function siteUrl() {
 }
 
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
+  // Tests only: a short-lived JWT to check that sync recovers after the token expires offline.
+  ...(process.env.AUTH_JWT_DURATION_MS ? { jwt: { durationMs: Number(process.env.AUTH_JWT_DURATION_MS) } } : {}),
   providers: [
     Google,
     ...(passwordLogin

@@ -28,7 +28,11 @@ export const importBatch = internalMutation({
     const userId = user?._id ?? (await ctx.db.insert("users", { email }));
     let added = 0, duplicates = 0;
     for (const it of items) {
-      const puzzleId = await insertPuzzle(ctx, userId, it.input, it.createdAt, { card: it.card, suspended: it.suspended });
+      const puzzleId = await insertPuzzle(ctx, userId, it.input, it.createdAt, {
+        card: it.card,
+        suspended: it.suspended,
+        introducedAt: it.card.state === 0 ? null : (it.reviews.filter((r) => r.stateBefore === 0).at(-1)?.reviewedAt ?? it.card.lastReviewAt),
+      });
       if (!puzzleId) {
         duplicates++;
         continue;

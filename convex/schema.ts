@@ -69,11 +69,19 @@ export default defineSchema({
     // Copies of card.state / card.dueAt for indexes.
     state: v.number(),
     dueAt: v.number(),
+    /** Last write to this row; the offline sync pulls rows changed since its cursor. */
+    updatedAt: v.optional(v.number()),
+    /** When it was first graded (left New), so any device can count today's new puzzles. */
+    introducedAt: v.optional(v.union(v.number(), v.null())),
   })
     .index("by_user_queue", ["userId", "suspended", "state", "dueAt"])
     .index("by_user_due", ["userId", "suspended", "dueAt"])
     .index("by_user_key", ["userId", "dedupeKey"])
-    .index("by_user_created", ["userId", "createdAt"]),
+    .index("by_user_created", ["userId", "createdAt"])
+    .index("by_user_updated", ["userId", "updatedAt"]),
+
+  /** Deleted puzzles, so offline copies drop them too. */
+  tombstones: defineTable({ userId: v.id("users"), puzzleId: v.string(), deletedAt: v.number() }).index("by_user_time", ["userId", "deletedAt"]),
 
   reviews: defineTable({
     userId: v.id("users"),
@@ -87,8 +95,11 @@ export default defineSchema({
     stateBefore: v.number(),
     cardBefore: card,
     scheduledDays: v.number(),
+    /** Client-made id of an offline grade, so a resend after a reload is applied once. */
+    opId: v.optional(v.string()),
   })
     .index("by_user_time", ["userId", "reviewedAt"])
+    .index("by_user_op", ["userId", "opId"])
     .index("by_puzzle", ["puzzleId", "reviewedAt"]),
 
   analyzedGames: defineTable({

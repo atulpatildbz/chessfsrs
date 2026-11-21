@@ -1,7 +1,7 @@
-import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { MiniBoard } from "../components/Board";
 import { MOTIFS, PHASES, TIME_TROUBLE } from "../../lib/motifs";
+import { useCachedQuery } from "../lib/local/sync";
 
 const LABELS: Record<string, string> = {
   "mate-in-1": "Mate in 1",
@@ -29,8 +29,8 @@ const pct = (x: number) => `${Math.round(x * 100)}%`;
 const secs = (ms: number | null) => (ms === null ? "" : `${Math.round(ms / 1000)} s`);
 
 export function Patterns() {
-  const d = useQuery(api.stats.patterns);
-  if (d === undefined) return <div className="p-10 text-sage">Loading…</div>;
+  const d = useCachedQuery(api.stats.patterns, {}, "patterns");
+  if (d === undefined) return <div className="p-10 text-dim">Patterns load from the server. Open this page once while online to keep a copy for offline use.</div>;
   if (d === null) return null;
 
   const rows = KEYS.map((k) => d.groups.find((g) => g.key === k)).filter((g): g is NonNullable<typeof g> => !!g && g.puzzles > 0);
@@ -47,62 +47,62 @@ export function Patterns() {
 
   return (
     <div className="mx-auto max-w-5xl px-5 py-6 md:px-10 md:py-10">
-      <h1 className="font-serif text-3xl">Patterns</h1>
-      <p className="mt-2 max-w-2xl text-sage">
+      <h1 className="font-serif text-[2.1rem] leading-tight">Patterns</h1>
+      <p className="prose-serif mt-3 max-w-2xl text-dim">
         Which kinds of puzzles you get wrong when they come back for review, from your last {d.reviews} reviews. Tags are worked out from each position and its solution.
       </p>
 
       <section className="mt-8">
-        <h2 className="font-serif text-xl">Hardest for you</h2>
+        <h2 className="font-serif text-2xl">Hardest for you</h2>
         {motifRows.length === 0 ? (
-          <p className="mt-3 text-sm text-sage">Not enough reviews yet. Each kind of puzzle needs {MIN_REVIEWS} reviews before its number means much.</p>
+          <p className="mt-3 text-sm text-dim">Not enough reviews yet. Each kind of puzzle needs {MIN_REVIEWS} reviews before its number means much.</p>
         ) : (
           <ul className="mt-4 divide-y divide-line/50">
             {motifRows.map((g) => (
               <li key={g.key} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 py-3 md:grid-cols-[minmax(0,260px)_minmax(0,1fr)_auto]">
-                <a className="min-w-0 truncate hover:text-brass md:whitespace-normal" href={`#/library?q=${encodeURIComponent(g.key)}`}>{LABELS[g.key] ?? g.key}</a>
-                <span className={`text-right font-semibold tabular-nums md:order-3 ${overall !== null && g.recall < overall - 0.05 ? "text-claret" : "text-bone"}`}>{pct(g.recall)}</span>
+                <a className="min-w-0 truncate underline-offset-[3px] hover:underline md:whitespace-normal" href={`#/library?q=${encodeURIComponent(g.key)}`}>{LABELS[g.key] ?? g.key}</a>
+                <span className={`text-right font-semibold tabular-nums md:order-3 ${overall !== null && g.recall < overall - 0.05 ? "text-blunder" : "text-boxwood"}`}>{pct(g.recall)}</span>
                 <div className="col-span-2 md:order-2 md:col-span-1">
-                  <div className="h-1.5 overflow-hidden rounded-full bg-felt-3">
-                    <div className={`h-full ${overall !== null && g.recall < overall - 0.05 ? "bg-claret" : "bg-moss"}`} style={{ width: pct(g.recall) }} />
+                  <div className="h-1.5 overflow-hidden rounded-full bg-ebony-3">
+                    <div className={`h-full ${overall !== null && g.recall < overall - 0.05 ? "bg-blunder" : "bg-good"}`} style={{ width: pct(g.recall) }} />
                   </div>
-                  <p className="mt-1 text-xs text-sage">{g.puzzles} puzzle{g.puzzles === 1 ? "" : "s"} · {g.reviews} reviews{g.avgSolveMs !== null ? ` · ${secs(g.avgSolveMs)} to solve` : ""}</p>
+                  <p className="mt-1 text-xs text-dim">{g.puzzles} puzzle{g.puzzles === 1 ? "" : "s"}, {g.reviews} reviews{g.avgSolveMs !== null ? `, ${secs(g.avgSolveMs)} to solve` : ""}</p>
                 </div>
               </li>
             ))}
           </ul>
         )}
-        {overall !== null && motifRows.length > 0 && <p className="mt-3 text-xs text-sage">Recall across all reviews: {pct(overall)}. Red means at least 5 points below that.</p>}
+        {overall !== null && motifRows.length > 0 && <p className="mt-3 text-xs text-dim">Recall across all reviews: {pct(overall)}. Red means at least 5 points below that.</p>}
         {unrated.length > 0 && (
-          <p className="mt-2 text-xs text-sage">Too few reviews yet: {unrated.map((g) => `${LABELS[g.key] ?? g.key} (${g.puzzles})`).join(", ")}.</p>
+          <p className="mt-2 text-xs text-dim">Too few reviews yet: {unrated.map((g) => `${LABELS[g.key] ?? g.key} (${g.puzzles})`).join(", ")}.</p>
         )}
         {sourceRows.length === 2 && (
-          <p className="mt-2 text-xs text-sage">{sourceRows.map((g) => `${LABELS[g.key]}: ${pct(g.recall)}`).join(" · ")}</p>
+          <p className="mt-2 text-xs text-dim">{sourceRows.map((g) => `${LABELS[g.key]}: ${pct(g.recall)}`).join(", ")}</p>
         )}
       </section>
 
       {games.total > 0 && (
         <section className="mt-12">
-          <h2 className="font-serif text-xl">Where your games go wrong</h2>
-          <p className="mt-1 text-sm text-sage">{games.total} missed moves found in your games.</p>
+          <h2 className="font-serif text-2xl">Where your games go wrong</h2>
+          <p className="mt-1 text-sm text-dim">{games.total} missed moves found in your games.</p>
           <div className="mt-4 grid gap-6 md:grid-cols-2">
-            <div className="panel p-5">
-              <p className="text-sm text-sage">By phase</p>
+            <div className="border-t border-line pt-4">
+              <p className="text-sm text-dim">By phase</p>
               <ul className="mt-3 space-y-2.5">
                 {phases.map((p) => (
                   <li key={p.key} className="grid grid-cols-[100px_minmax(0,1fr)_2.5rem] items-center gap-3 text-sm">
                     <span>{LABELS[p.key]}</span>
-                    <div className="h-2 overflow-hidden rounded-full bg-felt-3"><div className="h-full bg-brass" style={{ width: `${(p.n / maxPhase) * 100}%` }} /></div>
-                    <span className="text-right tabular-nums text-sage">{p.n}</span>
+                    <div className="h-2 overflow-hidden rounded-full bg-ebony-3"><div className="h-full bg-[var(--sq-dark)]" style={{ width: `${(p.n / maxPhase) * 100}%` }} /></div>
+                    <span className="text-right tabular-nums text-dim">{p.n}</span>
                   </li>
                 ))}
               </ul>
             </div>
-            <div className="panel p-5 text-sm">
-              <p className="text-sage">Clock</p>
-              <p className="mt-3"><span className="font-serif text-3xl">{pct(games.timeTrouble / games.total)}</span> <span className="text-sage">made in time trouble (under a tenth of your starting time)</span></p>
+            <div className="border-t border-line pt-4 text-sm">
+              <p className="text-dim">Clock</p>
+              <p className="mt-3"><span className="font-serif text-4xl">{pct(games.timeTrouble / games.total)}</span> <span className="text-dim">made in time trouble (under a tenth of your starting time)</span></p>
               {games.byTimeClass.filter((x) => x.key !== "unknown").length > 0 && (
-                <p className="mt-3 text-sage">{games.byTimeClass.filter((x) => x.key !== "unknown").sort((a, b) => b.n - a.n).map((x) => `${x.key} ${x.n}`).join(" · ")}</p>
+                <p className="mt-3 text-dim">{games.byTimeClass.filter((x) => x.key !== "unknown").sort((a, b) => b.n - a.n).map((x) => `${x.key} ${x.n}`).join(", ")}</p>
               )}
             </div>
           </div>
@@ -111,14 +111,14 @@ export function Patterns() {
 
       {d.leeches.length > 0 && (
         <section className="mt-12">
-          <h2 className="font-serif text-xl">Puzzles you keep missing</h2>
-          <p className="mt-1 text-sm text-sage">Forgotten three times or more. Worth a slow look: write down what you miss in the puzzle's notes.</p>
+          <h2 className="font-serif text-2xl">Puzzles you keep missing</h2>
+          <p className="mt-1 text-sm text-dim">Forgotten three times or more. Worth a slow look: write down what you miss in the puzzle's notes.</p>
           <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
             {d.leeches.map((p) => (
               <a key={p._id} href={`#/puzzle/${p._id}`} className="block">
                 <MiniBoard fen={p.fen} orientation={p.solver === "w" ? "white" : "black"} />
                 <p className="mt-1.5 truncate text-sm">{p.label ?? `${p.solver === "w" ? "White" : "Black"} to play`}</p>
-                <p className="text-xs text-sage">missed {p.lapses} times</p>
+                <p className="text-xs text-dim">missed {p.lapses} times</p>
               </a>
             ))}
           </div>

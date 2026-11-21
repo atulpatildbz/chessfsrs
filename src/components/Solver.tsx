@@ -231,9 +231,9 @@ export const Solver = forwardRef<SolverHandle, Props>(function Solver({ puzzle, 
         <Board config={initialConfig} onReady={(api) => { cg.current = api; }} />
         {promo && (
           <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/50" onClick={() => { setPromo(null); sync(lastOf()); }}>
-            <div className="pop flex gap-2 rounded-xl bg-felt-2 p-3" onClick={(e) => e.stopPropagation()}>
+            <div className="pop flex gap-2 rounded-xl bg-ebony-2 p-3" onClick={(e) => e.stopPropagation()}>
               {PROMO.map((p) => (
-                <button key={p} aria-label={`Promote to ${p}`} className="cg-wrap h-16 w-16 rounded-lg bg-[var(--sq-light)] hover:bg-brass-2"
+                <button key={p} aria-label={`Promote to ${p}`} className="cg-wrap h-16 w-16 rounded-lg bg-[var(--sq-light)] hover:bg-boxwood-2"
                   onClick={() => { const pr = promo; setPromo(null); applyUserMove(pr.from + pr.to + p); }}>
                   <piece className={`${colorName(puzzle.solver)} ${({ q: "queen", n: "knight", r: "rook", b: "bishop" })[p]}`} style={{ position: "relative", display: "block", width: "100%", height: "100%" }} />
                 </button>

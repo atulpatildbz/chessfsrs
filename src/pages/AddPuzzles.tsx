@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import { useMutation } from "convex/react";
+import { useConvexAuth, useMutation } from "convex/react";
 import { ArrowLeftRight, Check } from "lucide-react";
 import { api } from "../../convex/_generated/api";
+import { useOffline } from "../lib/local/sync";
 import { MiniBoard } from "../components/Board";
 import { parsePuzzle, splitPgns, formatLine, moverAt, type Color, type ParsedPuzzle } from "../../lib/puzzle";
 import { figurine, sideName } from "../lib/notation";
@@ -20,6 +21,8 @@ export function AddPuzzles() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const add = useMutation(api.puzzles.add);
+  const { isAuthenticated } = useConvexAuth();
+  const offline = useOffline() || !isAuthenticated;
 
   const parsed = useMemo(() => splitPgns(text).map(parsePuzzle), [text]);
   const valid = parsed.flatMap((r, i) => (r.ok ? [{ ...r.puzzle, solver: overrides[i] ?? r.puzzle.solver, i }] : []));
@@ -45,9 +48,9 @@ export function AddPuzzles() {
 
   return (
     <div className="mx-auto max-w-5xl px-5 py-6 md:px-10 md:py-10">
-      <h1 className="font-serif text-3xl">Add puzzles</h1>
-      <p className="mt-2 max-w-xl text-sage">
-        Paste one or more PGNs with a <code className="text-bone">[FEN]</code> header and the solution line. The side that plays the last move is the one you'll play; earlier moves by the other side are played for you.
+      <h1 className="font-serif text-[2.1rem] leading-tight">Add puzzles</h1>
+      <p className="prose-serif mt-3 max-w-xl text-dim">
+        Paste one or more PGNs with a <code className="text-boxwood">[FEN]</code> header and the solution line. The side that plays the last move is the one you'll play; earlier moves by the other side are played for you.
       </p>
 
       <div className="mt-6 grid gap-8 md:grid-cols-[1fr_minmax(0,340px)]">
@@ -56,28 +59,29 @@ export function AddPuzzles() {
             placeholder={EXAMPLE} className="field scroll-thin min-h-56 font-[ui-monospace,monospace] text-sm leading-relaxed" aria-label="PGN" />
           <input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="Tags, comma separated (optional): fork, endgame" className="field text-sm" />
           <div className="flex flex-wrap items-center gap-3">
-            <button className="btn btn-primary" disabled={!valid.length || busy} onClick={save}>
+            {offline && <span className="text-sm text-dim">Adding needs a connection.</span>}
+            <button className="btn btn-primary" disabled={!valid.length || busy || offline} onClick={save}>
               {valid.length > 1 ? `Add ${valid.length} puzzles` : "Add puzzle"}
             </button>
             {!text && <button className="btn btn-ghost text-sm" onClick={() => setText(EXAMPLE)}>Paste the example</button>}
             {result && (
-              <span className="flex items-center gap-1.5 text-sm text-moss">
+              <span className="flex items-center gap-1.5 text-sm text-good">
                 <Check size={16} /> Added {result.added}{result.duplicates ? `, skipped ${result.duplicates} already in your library` : ""}.
-                <button className="ml-1 text-brass underline-offset-4 hover:underline" onClick={() => navigate("/practice")}>Practise now</button>
+                <button className="ml-1 text-boxwood underline-offset-4 hover:underline" onClick={() => navigate("/practice")}>Practise now</button>
               </span>
             )}
-            {error && <span className="text-sm text-claret">{error}</span>}
+            {error && <span className="text-sm text-blunder">{error}</span>}
           </div>
         </div>
 
         <div className="flex flex-col gap-5">
-          {parsed.length === 0 && <p className="text-sm text-sage">A preview of each puzzle shows up here.</p>}
+          {parsed.length === 0 && <p className="text-sm text-dim">A preview of each puzzle shows up here.</p>}
           {parsed.map((r, i) =>
             r.ok ? (
               <Preview key={i} p={{ ...r.puzzle, solver: overrides[i] ?? r.puzzle.solver }} onFlip={() => setOverrides({ ...overrides, [i]: (overrides[i] ?? r.puzzle.solver) === "w" ? "b" : "w" })} />
             ) : (
               <div key={i} className="panel p-4 text-sm">
-                <p className="text-claret">Puzzle {i + 1} can't be read: {r.error}</p>
+                <p className="text-blunder">Puzzle {i + 1} can't be read: {r.error}</p>
               </div>
             ),
           )}
@@ -94,9 +98,9 @@ function Preview({ p, onFlip }: { p: ParsedPuzzle; onFlip: () => void }) {
     <div className="panel p-4">
       <MiniBoard fen={p.fen} orientation={p.solver === "w" ? "white" : "black"} />
       <p className="figurine mt-3 text-sm">{formatLine(p.fen, p.san.map(figurine))}</p>
-      <div className="mt-2 flex items-center justify-between gap-2 text-sm text-sage">
+      <div className="mt-2 flex items-center justify-between gap-2 text-sm text-dim">
         <span>You play {sideName(p.solver)}: {userMoves} move{userMoves === 1 ? "" : "s"} to find{auto ? ", after the first move" : ""}.</span>
-        <button onClick={onFlip} className="flex shrink-0 items-center gap-1 text-brass hover:underline" title="Play the other side"><ArrowLeftRight size={14} /> Switch</button>
+        <button onClick={onFlip} className="link flex shrink-0 items-center gap-1" title="Play the other side"><ArrowLeftRight size={14} /> Switch</button>
       </div>
     </div>
   );

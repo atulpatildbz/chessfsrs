@@ -1,21 +1,32 @@
 @import "tailwindcss";
 @import "@lichess-org/chessground/assets/chessground.base.css";
 @import "@lichess-org/chessground/assets/chessground.cburnett.css";
+@import "@fontsource-variable/newsreader/opsz.css";
+@import "@fontsource-variable/newsreader/opsz-italic.css";
+@import "@fontsource-variable/schibsted-grotesk/wght.css";
 
 @theme {
-  --color-felt: #0f2a23;
-  --color-felt-2: #163a30;
-  --color-felt-3: #1e4a3d;
-  --color-line: #2a5547;
-  --color-bone: #ede6d6;
-  --color-sage: #97afa3;
-  --color-brass: #c9a34e;
-  --color-brass-2: #e0bd6a;
-  --color-moss: #86b86b;
-  --color-claret: #c0493f;
-  --font-sans: "Onest", ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Young Serif", Georgia, serif;
-  --font-figurine: "Noto Sans Symbols 2", "Onest", sans-serif;
+  /* Ebony and boxwood: the two woods chess pieces are turned from. */
+  --color-ebony: #17120e;
+  --color-ebony-2: #211a14;
+  --color-ebony-3: #2e251d;
+  --color-line: #3a2f25;
+  --color-boxwood: #eadfc6;
+  --color-boxwood-2: #f7efdd;
+  --color-dim: #a8977c;
+  /* Annotation marks: ? for the move you played, ! for the one that worked. */
+  --color-blunder: #e0674c;
+  --color-good: #a6c886;
+  --font-sans: "Schibsted Grotesk Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Newsreader Variable", Georgia, serif;
+  --font-figurine: "Figurines", "Schibsted Grotesk Variable", sans-serif;
+}
+
+@font-face {
+  font-family: "Figurines";
+  src: url("./fonts/figurines.woff2") format("woff2");
+  unicode-range: U+2654-265F;
+  font-display: swap;
 }
 
 :root {
@@ -31,15 +42,15 @@
 html, body, #root { height: 100%; }
 body {
   margin: 0;
-  background: var(--color-felt);
-  color: var(--color-bone);
+  background: var(--color-ebony);
+  color: var(--color-boxwood);
   font-family: var(--font-sans);
-  font-feature-settings: "tnum" 1;
+  font-size: 15px;
   -webkit-tap-highlight-color: transparent;
   -webkit-font-smoothing: antialiased;
 }
 
-:focus-visible { outline: 2px solid var(--color-brass); outline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--color-boxwood); outline-offset: 2px; }
 
 .figurine { font-family: var(--font-figurine); font-variant-emoji: text; }
 
@@ -60,7 +71,8 @@ cg-board square.oc.move-dest { background: radial-gradient(transparent 0%, trans
 cg-board square.check { background: radial-gradient(ellipse at center, rgb(255 0 0) 0%, rgb(231 0 0) 25%, rgb(169 0 0 / 0) 89%, rgb(158 0 0 / 0) 100%); }
 cg-board square.wrong-sq { background-color: rgb(192 73 63 / 0.6); }
 cg-board square.right-sq { background-color: rgb(134 184 107 / 0.6); }
-cg-board square.hint-sq { box-shadow: inset 0 0 0 4px var(--color-brass-2); }
+/* The hint ring has to read on light and dark squares of every board: dark edge, amber core. */
+cg-board square.hint-sq { box-shadow: inset 0 0 0 2px rgb(23 18 14 / 0.7), inset 0 0 0 5px #e9a23b; }
 /* Coordinates inside the edge squares (chessground's defaults sit outside the board). */
 .cg-wrap coords { font-family: var(--font-sans); font-weight: 600; font-size: clamp(8px, 1.6vmin, 11px); opacity: 1; }
 .cg-wrap coords.ranks { left: 0; top: 0; height: 100%; width: 12.5%; }
@@ -84,19 +96,28 @@ cg-board square.hint-sq { box-shadow: inset 0 0 0 4px var(--color-brass-2); }
 @media (prefers-reduced-motion: reduce) { .shake, .pop { animation: none; } }
 
 /* ---------- Controls ---------- */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; border-radius: 10px; padding: 0.6rem 1rem; font-weight: 600; font-size: 0.95rem; transition: background-color 0.15s, color 0.15s, border-color 0.15s; cursor: pointer; user-select: none; }
-.btn:disabled { opacity: 0.45; cursor: not-allowed; }
-.btn-primary { background: var(--color-brass); color: #1c1606; }
-.btn-primary:hover:not(:disabled) { background: var(--color-brass-2); }
-.btn-ghost { background: transparent; color: var(--color-bone); border: 1px solid var(--color-line); }
-.btn-ghost:hover:not(:disabled) { background: var(--color-felt-2); }
-.btn-quiet { background: var(--color-felt-2); color: var(--color-bone); }
-.btn-quiet:hover:not(:disabled) { background: var(--color-felt-3); }
-.field { width: 100%; background: var(--color-felt); border: 1px solid var(--color-line); border-radius: 10px; padding: 0.6rem 0.75rem; color: var(--color-bone); }
-.field:focus { outline: none; border-color: var(--color-brass); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; border-radius: 6px; padding: 0.65rem 1.05rem; font-weight: 600; font-size: 0.95rem; transition: background-color 0.15s, color 0.15s, border-color 0.15s; cursor: pointer; user-select: none; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-primary { background: var(--color-boxwood); color: var(--color-ebony); }
+.btn-primary:hover:not(:disabled) { background: var(--color-boxwood-2); }
+.btn-ghost { background: transparent; color: var(--color-boxwood); border: 1px solid var(--color-line); }
+.btn-ghost:hover:not(:disabled) { background: var(--color-ebony-2); }
+.btn-quiet { background: var(--color-ebony-3); color: var(--color-boxwood); }
+.btn-quiet:hover:not(:disabled) { background: #3a2f25; }
+.field { width: 100%; background: var(--color-ebony); border: 1px solid var(--color-line); border-radius: 6px; padding: 0.6rem 0.75rem; color: var(--color-boxwood); }
+.field:focus { outline: none; border-color: var(--color-boxwood); }
 @media (pointer: coarse) { .field { font-size: 16px; } }
-.field::placeholder { color: rgb(151 175 163 / 0.6); }
-.panel { background: var(--color-felt-2); border-radius: 14px; }
+.field::placeholder { color: rgb(168 151 124 / 0.65); }
+.panel { background: var(--color-ebony-2); border-radius: 10px; }
+/* Prose and move text: the book face. */
+.prose-serif { font-family: var(--font-serif); font-size: 1.0625rem; line-height: 1.5; font-variation-settings: "opsz" 16; }
+.link { color: var(--color-boxwood); text-decoration: underline; text-decoration-color: rgb(234 223 198 / 0.35); text-underline-offset: 3px; }
+.link:hover { text-decoration-color: currentColor; }
+/* Annotated moves: Bd6? in red pencil, Nd6! in green. */
+.mv-bad { color: var(--color-blunder); }
+.mv-bad::after { content: "?"; }
+.mv-good { color: var(--color-good); }
+.mv-good::after { content: "!"; }
 .kbd { font-size: 0.7rem; opacity: 0.55; font-weight: 500; }
 @media (pointer: coarse) { .no-scrollbar { scrollbar-width: none; } .no-scrollbar::-webkit-scrollbar { display: none; } }
 .scroll-thin { scrollbar-width: thin; scrollbar-color: var(--color-line) transparent; }

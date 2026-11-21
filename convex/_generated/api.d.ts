@@ -19,6 +19,7 @@ import type * as practice from "../practice.js";
 import type * as puzzles from "../puzzles.js";
 import type * as settings from "../settings.js";
 import type * as stats from "../stats.js";
+import type * as sync from "../sync.js";
 import type * as users from "../users.js";
 
 import type {
@@ -39,6 +40,7 @@ declare const fullApi: ApiFromModules<{
   puzzles: typeof puzzles;
   settings: typeof settings;
   stats: typeof stats;
+  sync: typeof sync;
   users: typeof users;
 }>;
 

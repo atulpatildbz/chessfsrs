@@ -4,8 +4,8 @@ const config: CapacitorConfig = {
   appId: "com.atulpatildbz.chessfsrs",
   appName: "chessfsrs",
   webDir: "dist",
-  backgroundColor: "#0F2A23",
-  android: { backgroundColor: "#0F2A23" },
+  backgroundColor: "#17120E",
+  android: { backgroundColor: "#17120E" },
 };
 
 export default config;

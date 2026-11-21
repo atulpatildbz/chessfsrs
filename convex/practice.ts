@@ -76,27 +76,44 @@ export const review = mutation({
     mistakes: v.number(),
     hints: v.number(),
     revealed: v.boolean(),
-    /** reps the client saw; a second submit of the same review is ignored. */
+    /** reps the client saw. Without an opId, a second submit of the same review is ignored. */
     expectedReps: v.number(),
+    /** Client-made id of this grade (offline outbox): a resend returns the first result. */
+    opId: v.optional(v.string()),
+    /** When the grade was given, for grades made offline and sent later. */
+    reviewedAt: v.optional(v.number()),
   },
   handler: async (ctx, a) => {
     const user = await requireUser(ctx);
+    if (a.opId) {
+      const seen = await ctx.db.query("reviews").withIndex("by_user_op", (q) => q.eq("userId", user._id).eq("opId", a.opId)).first();
+      if (seen) return { reviewId: seen._id, applied: false, updatedAt: (await ctx.db.get(seen.puzzleId))?.updatedAt ?? 0 };
+    }
     const p = await ctx.db.get(a.id);
     if (!p || p.userId !== user._id) throw new ConvexError("Puzzle not found");
     if (![1, 2, 3, 4].includes(a.grade)) throw new ConvexError("Bad grade");
-    if (p.card.reps !== a.expectedReps) {
+    if (!a.opId && p.card.reps !== a.expectedReps) {
       const last = await ctx.db.query("reviews").withIndex("by_puzzle", (q) => q.eq("puzzleId", p._id)).order("desc").first();
-      if (last) return { reviewId: last._id, dueAt: p.card.dueAt, state: p.card.state };
+      if (last) return { reviewId: last._id, applied: false, updatedAt: p.updatedAt ?? 0 };
     }
     const s = await settingsFor(ctx, user._id);
     const now = Date.now();
-    const card = fsrsReview(p.card, p._id, a.grade as Grade, now, s.desiredRetention);
-    await ctx.db.patch(p._id, { card, state: card.state, dueAt: card.dueAt });
+    // An offline grade is scheduled from when it was given, but never before the card's last review
+    // (another device may have graded it since) and never in the future.
+    const at = Math.min(now, Math.max(a.reviewedAt ?? now, p.card.lastReviewAt ?? 0));
+    const card = fsrsReview(p.card, p._id, a.grade as Grade, at, s.desiredRetention);
+    await ctx.db.patch(p._id, {
+      card,
+      state: card.state,
+      dueAt: card.dueAt,
+      updatedAt: now,
+      ...(p.card.state === 0 ? { introducedAt: at } : {}),
+    });
     const reviewId = await ctx.db.insert("reviews", {
       userId: user._id,
       puzzleId: p._id,
       grade: a.grade,
-      reviewedAt: now,
+      reviewedAt: at,
       durationMs: Math.max(0, Math.min(a.durationMs, 3_600_000)),
       mistakes: a.mistakes,
       hints: a.hints,
@@ -104,21 +121,39 @@ export const review = mutation({
       stateBefore: p.card.state,
       cardBefore: p.card,
       scheduledDays: card.scheduledDays,
+      ...(a.opId ? { opId: a.opId } : {}),
     });
-    return { reviewId, dueAt: card.dueAt, state: card.state };
+    return { reviewId, applied: true, updatedAt: now };
   },
 });
 
-/** Undo a review: restore the card and drop the log entry. */
+/**
+ * Undo a review: restore the card and drop the log entry. Only the puzzle's latest review can be
+ * undone, so a late undo never wipes out a newer grade. Takes the review id or the grade's opId.
+ */
 export const undo = mutation({
-  args: { reviewId: v.id("reviews") },
-  handler: async (ctx, { reviewId }) => {
+  args: { reviewId: v.optional(v.id("reviews")), opId: v.optional(v.string()) },
+  handler: async (ctx, { reviewId, opId }) => {
     const user = await requireUser(ctx);
-    const r = await ctx.db.get(reviewId);
-    if (!r || r.userId !== user._id) throw new ConvexError("Review not found");
+    const r = reviewId
+      ? await ctx.db.get(reviewId)
+      : opId
+        ? await ctx.db.query("reviews").withIndex("by_user_op", (q) => q.eq("userId", user._id).eq("opId", opId)).first()
+        : null;
+    if (!r || r.userId !== user._id) return { updatedAt: 0 };
     const p = await ctx.db.get(r.puzzleId);
-    if (p) await ctx.db.patch(p._id, { card: r.cardBefore, state: r.cardBefore.state, dueAt: r.cardBefore.dueAt });
-    await ctx.db.delete(reviewId);
-    return r.puzzleId;
+    const latest = await ctx.db.query("reviews").withIndex("by_puzzle", (q) => q.eq("puzzleId", r.puzzleId)).order("desc").first();
+    if (latest?._id !== r._id) return { updatedAt: p?.updatedAt ?? 0 };
+    const now = Date.now();
+    if (p)
+      await ctx.db.patch(p._id, {
+        card: r.cardBefore,
+        state: r.cardBefore.state,
+        dueAt: r.cardBefore.dueAt,
+        updatedAt: now,
+        ...(r.stateBefore === 0 ? { introducedAt: null } : {}),
+      });
+    await ctx.db.delete(r._id);
+    return { updatedAt: now };
   },
 });

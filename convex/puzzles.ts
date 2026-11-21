@@ -23,7 +23,7 @@ export const puzzleInput = v.object({
 type Input = typeof puzzleInput.type;
 
 /** Insert unless the same position + line already exists. Returns the new id or null for a duplicate. */
-export async function insertPuzzle(ctx: MutationCtx, userId: Id<"users">, p: Input, now: number, keep?: { card: StoredCard; suspended: boolean }) {
+export async function insertPuzzle(ctx: MutationCtx, userId: Id<"users">, p: Input, now: number, keep?: { card: StoredCard; suspended: boolean; introducedAt: number | null }) {
   const err = validateLine(p);
   if (err) throw new ConvexError(`Invalid puzzle: ${err}`);
   const key = dedupeKey(p);
@@ -47,6 +47,8 @@ export async function insertPuzzle(ctx: MutationCtx, userId: Id<"users">, p: Inp
     card,
     state: card.state,
     dueAt: card.dueAt,
+    updatedAt: Date.now(),
+    introducedAt: keep?.introducedAt ?? null,
   });
 }
 
@@ -150,7 +152,7 @@ export const update = mutation({
     }
     // Only send fields that were given: an explicit undefined would delete the field.
     const { tags, ...rest } = patch;
-    await ctx.db.patch(id, tags !== undefined ? { ...rest, tags: normTags(tags) } : rest);
+    await ctx.db.patch(id, { ...(tags !== undefined ? { ...rest, tags: normTags(tags) } : rest), updatedAt: Date.now() });
   },
 });
 
@@ -158,16 +160,18 @@ export const reset = mutation({
   args: { id: v.id("puzzles") },
   handler: async (ctx, { id }) => {
     await own(ctx, id);
-    const card = newCard(Date.now());
-    await ctx.db.patch(id, { card, state: card.state, dueAt: card.dueAt });
+    const now = Date.now();
+    const card = newCard(now);
+    await ctx.db.patch(id, { card, state: card.state, dueAt: card.dueAt, introducedAt: null, updatedAt: now });
   },
 });
 
 export const remove = mutation({
   args: { id: v.id("puzzles") },
   handler: async (ctx, { id }) => {
-    await own(ctx, id);
+    const p = await own(ctx, id);
     for (const r of await ctx.db.query("reviews").withIndex("by_puzzle", (q) => q.eq("puzzleId", id)).collect()) await ctx.db.delete(r._id);
     await ctx.db.delete(id);
+    await ctx.db.insert("tombstones", { userId: p.userId, puzzleId: id, deletedAt: Date.now() });
   },
 });

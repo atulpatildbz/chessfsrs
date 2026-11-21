@@ -1,31 +1,34 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { ArrowLeft, ExternalLink, Lightbulb, RotateCcw, Undo2, Eye } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import type { PracticePuzzle } from "../../convex/practice";
+import { buildQueue, type LocalPuzzle } from "../../lib/offline";
+import { enqueue, isInFlight, removeOp, useLocal, usePuzzles } from "../lib/local/store";
+import { useOffline } from "../lib/local/sync";
 import { Solver, type Attempt, type Feedback, type SolverHandle, type SolverStatus } from "../components/Solver";
 import { formatInterval, GRADE_NAMES, preview, suggestGrade, type Grade } from "../../lib/fsrs";
 import { formatLine, moverAt, sanLine } from "../../lib/puzzle";
 import { figurine, formatEval, sideName } from "../lib/notation";
 import { startOfToday, useNow } from "../lib/time";
 import { navigate } from "../lib/router";
-import { useStableQuery } from "../lib/convex";
+
+type PracticePuzzle = LocalPuzzle;
+const DEFAULT_NEW_PER_DAY = 15;
 
 export function Practice({ puzzleId }: { puzzleId: string | null }) {
-  if (puzzleId) return <SinglePuzzle id={puzzleId as Id<"puzzles">} />;
+  if (puzzleId) return <SinglePuzzle id={puzzleId} />;
   return <Session />;
 }
 
 /** Try one puzzle from the library without touching its schedule. */
-function SinglePuzzle({ id }: { id: Id<"puzzles"> }) {
-  const p = useQuery(api.puzzles.get, { id });
-  if (p === undefined) return null;
-  if (p === null) return <Empty title="Puzzle not found" body="It may have been deleted." />;
+function SinglePuzzle({ id }: { id: string }) {
+  const p = usePuzzles().get(id);
+  if (!p) return <Empty title="Puzzle not found" body="It may have been deleted." />;
   return (
     <Trainer
       key={p._id}
-      puzzle={p as unknown as PracticePuzzle}
+      puzzle={p}
       graded={false}
       header={<button className="btn btn-ghost !px-3 !py-1.5 text-sm" onClick={() => navigate(`/puzzle/${id}`)}><ArrowLeft size={16} /> Back</button>}
     />
@@ -35,56 +38,52 @@ function SinglePuzzle({ id }: { id: Id<"puzzles"> }) {
 function Session() {
   const now = useNow(5_000);
   const dayStart = useMemo(() => startOfToday(), [now]); // eslint-disable-line react-hooks/exhaustive-deps
-  const q = useStableQuery(api.practice.queue, { now, dayStart });
-  const [current, setCurrent] = useState<PracticePuzzle | null>(null);
+  const puzzles = usePuzzles();
+  const { settings, ops } = useLocal();
+  const q = useMemo(
+    () => buildQueue(puzzles.values(), { now: Date.now(), dayStart, newPerDay: settings?.newPerDay ?? DEFAULT_NEW_PER_DAY }),
+    [puzzles, dayStart, settings?.newPerDay, now], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const [currentId, setCurrentId] = useState<string | null>(null);
   const [count, setCount] = useState(0);
-  const [last, setLast] = useState<{ reviewId: Id<"reviews">; puzzle: PracticePuzzle } | null>(null);
-  const undo = useMutation(api.practice.undo);
-  const undoing = useRef(false);
-  // A queue snapshot taken before the last grade landed still lists that puzzle with its old reps.
-  const stale = (p: PracticePuzzle) => last !== null && p._id === last.puzzle._id && p.card.reps === last.puzzle.card.reps;
+  const [last, setLast] = useState<{ opId: string; puzzle: PracticePuzzle } | null>(null);
+  // Grades apply to the local copy at once (and reach the server whenever there's a connection),
+  // so a graded puzzle has already left the queue when the next one is picked.
+  const current = currentId ? puzzles.get(currentId) ?? null : null;
 
-  // Pick the next puzzle: due ones first, with a new puzzle after every two reviews. A graded
-  // puzzle drops out of the queue by itself: Convex resolves the mutation only once queries
-  // reflect it.
+  // Pick the next puzzle: due ones first, with a new puzzle after every two reviews.
   useEffect(() => {
-    if (current || !q) return;
-    const due = q.due.filter((p) => !stale(p));
-    const fresh = q.fresh.filter((p) => !stale(p));
-    const pickNew = fresh.length > 0 && (due.length === 0 || count % 3 === 2);
-    const next = pickNew ? fresh[0] : due[0];
-    if (next) setCurrent(next);
-  }, [q, current, count, last]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (current) return;
+    const pickNew = q.fresh.length > 0 && (q.due.length === 0 || count % 3 === 2);
+    const next = pickNew ? q.fresh[0] : q.due[0];
+    if (next) setCurrentId(next._id);
+  }, [q, current, count]);
 
-  const onGraded = useCallback((reviewId: Id<"reviews">, p: PracticePuzzle) => {
-    setLast({ reviewId, puzzle: p });
+  const onGraded = useCallback((opId: string, p: PracticePuzzle) => {
+    setLast({ opId, puzzle: p });
     setCount((c) => c + 1);
-    setCurrent(null);
+    setCurrentId(null);
   }, []);
 
-  const doUndo = async () => {
-    if (!last || undoing.current) return;
-    undoing.current = true;
-    try {
-      await undo({ reviewId: last.reviewId });
-      setCurrent({ ...last.puzzle });
-      setCount((c) => Math.max(0, c - 1));
-      setLast(null);
-    } catch {
-      setLast(null); // already undone elsewhere
-    } finally {
-      undoing.current = false;
-    }
+  const doUndo = () => {
+    if (!last) return;
+    const pending = ops.find((o) => o.opId === last.opId);
+    if (pending && pending.ack === undefined && !isInFlight(last.opId)) removeOp(last.opId); // never left this device
+    else enqueue({ kind: "undo", opId: crypto.randomUUID(), targetOpId: last.opId, puzzleId: last.puzzle._id, cardBefore: last.puzzle.card, introducedBefore: last.puzzle.introducedAt });
+    setCurrentId(last.puzzle._id);
+    setCount((c) => Math.max(0, c - 1));
+    setLast(null);
   };
 
-  if (!q) return null;
-
   const header = (
-    <div className="flex items-center gap-4 text-sm text-sage">
-      <span title="Due now"><b className="font-semibold text-bone">{q.due.length}{q.dueMore ? "+" : ""}</b> due</span>
-      <span title="New puzzles left today"><b className="font-semibold text-bone">{q.fresh.length}</b> new</span>
-      <span title="Done this session"><b className="font-semibold text-bone">{count}</b> done</span>
-      {last && <button onClick={doUndo} className="ml-auto flex items-center gap-1 hover:text-bone" title="Undo last grade (U)"><Undo2 size={15} /> Undo</button>}
+    <div>
+      <div className="flex items-center gap-4 text-sm text-dim">
+        <span title="Due now"><b className="font-semibold text-boxwood">{q.due.length}</b> due</span>
+        <span title="New puzzles left today"><b className="font-semibold text-boxwood">{q.fresh.length}</b> new</span>
+        <span title="Done this session"><b className="font-semibold text-boxwood">{count}</b> done</span>
+        {last && <button onClick={doUndo} className="ml-auto flex items-center gap-1 hover:text-boxwood" title="Undo last grade (U)"><Undo2 size={15} /> Undo</button>}
+      </div>
+      <SyncNote />
     </div>
   );
 
@@ -103,7 +102,21 @@ function Session() {
     );
   }
 
-  return <Trainer key={current._id + count} puzzle={current} graded desiredRetention={q.desiredRetention} header={header} onGraded={onGraded} onUndo={last ? doUndo : undefined} />;
+  return <Trainer key={current._id + count} puzzle={current} graded desiredRetention={settings?.desiredRetention ?? 0.9} header={header} onGraded={onGraded} onUndo={last ? doUndo : undefined} />;
+}
+
+/** Says when grades are waiting for a connection. Silent when everything is on the server. */
+function SyncNote() {
+  const offline = useOffline();
+  const { isAuthenticated } = useConvexAuth();
+  const pending = useLocal().ops.filter((o) => o.ack === undefined).length;
+  if (!offline && (pending === 0 || isAuthenticated)) return null;
+  const grades = `${pending} grade${pending === 1 ? "" : "s"}`;
+  return (
+    <p className="mt-1 text-xs text-dim" role="status">
+      {offline ? (pending ? `Offline. ${grades} will sync when you're back online.` : "Offline. Your grades will sync when you're back online.") : `${grades} waiting to sync.`}
+    </p>
+  );
 }
 
 function Waiting({ nextAt, header }: { nextAt: number; header: React.ReactNode }) {
@@ -114,8 +127,8 @@ function Waiting({ nextAt, header }: { nextAt: number; header: React.ReactNode }
     <div className="mx-auto max-w-lg px-5 py-10">
       {header}
       <div className="mt-16 text-center">
-        <p className="font-serif text-5xl tabular-nums">{Math.floor(s / 60)}:{String(s % 60).padStart(2, "0")}</p>
-        <p className="mt-3 text-sage">until a puzzle you're still learning comes back. Leave this open or come back later.</p>
+        <p className="font-serif text-6xl tabular-nums">{Math.floor(s / 60)}:{String(s % 60).padStart(2, "0")}</p>
+        <p className="prose-serif mt-3 text-dim">until a puzzle you're still learning comes back. Leave this open or come back later.</p>
       </div>
     </div>
   );
@@ -124,8 +137,8 @@ function Waiting({ nextAt, header }: { nextAt: number; header: React.ReactNode }
 function Empty({ title, body, actions, extra }: { title: string; body: string; actions?: React.ReactNode; extra?: React.ReactNode }) {
   return (
     <div className="mx-auto flex max-w-md flex-col items-start gap-4 px-6 py-16">
-      <h1 className="font-serif text-3xl">{title}</h1>
-      <p className="text-sage">{body}</p>
+      <h1 className="font-serif text-[2.1rem] leading-tight">{title}</h1>
+      <p className="prose-serif text-dim">{body}</p>
       <div className="mt-2 flex flex-wrap gap-3">{actions}</div>
       {extra}
     </div>
@@ -137,23 +150,24 @@ type TrainerProps = {
   graded: boolean;
   desiredRetention?: number;
   header?: React.ReactNode;
-  onGraded?: (reviewId: Id<"reviews">, p: PracticePuzzle) => void;
+  onGraded?: (opId: string, p: PracticePuzzle) => void;
   onUndo?: () => void;
 };
 
-function Trainer({ puzzle, graded, desiredRetention = 0.9, header, onGraded, onUndo }: TrainerProps) {
+function Trainer({ puzzle: initial, graded, desiredRetention = 0.9, header, onGraded, onUndo }: TrainerProps) {
+  // The local copy hands out a new object whenever a sync touches it; the board must not reset
+  // mid-solve because of that. Each puzzle gets a fresh Trainer (keyed by the caller).
+  const [puzzle] = useState(initial);
   const solver = useRef<SolverHandle>(null);
   const [status, setStatus] = useState<SolverStatus>("intro");
   const [ply, setPly] = useState(0);
   const [feedback, setFeedback] = useState<Feedback>("none");
   const [attempt, setAttempt] = useState<Attempt | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [gradeError, setGradeError] = useState<string | null>(null);
-  const inFlight = useRef(false);
-  const review = useMutation(api.practice.review);
+  const graded1 = useRef(false);
+  const { isAuthenticated } = useConvexAuth();
   // Woodpecker-style feedback: are you recognising this one faster than last time? Frozen at the
   // first answer, so grading this attempt doesn't replace "last time" with itself.
-  const lastSolveLive = useQuery(api.stats.lastSolve, graded ? { puzzleId: puzzle._id as Id<"puzzles"> } : "skip");
+  const lastSolveLive = useQuery(api.stats.lastSolve, graded && isAuthenticated ? { puzzleId: puzzle._id as Id<"puzzles"> } : "skip");
   const lastSolve = useRef<{ ms: number } | null | undefined>(undefined);
   if (lastSolve.current === undefined && lastSolveLive !== undefined) lastSolve.current = lastSolveLive;
 
@@ -168,21 +182,16 @@ function Trainer({ puzzle, graded, desiredRetention = 0.9, header, onGraded, onU
   const onStatus = useCallback((s: SolverStatus, p: number, fb: Feedback) => { setStatus(s); setPly(p); setFeedback(fb); }, []);
   const onFinish = useCallback((a: Attempt) => setAttempt((prev) => prev ?? a), []);
 
-  const grade = useCallback(async (g: Grade) => {
-    if (!attempt || inFlight.current || !graded) return;
-    inFlight.current = true;
-    setSubmitting(true);
-    setGradeError(null);
-    try {
-      const r = await review({ id: puzzle._id as Id<"puzzles">, grade: g, durationMs: attempt.ms, mistakes: attempt.mistakes, hints: attempt.hints, revealed: attempt.revealed, expectedReps: puzzle.card.reps });
-      onGraded?.(r.reviewId, puzzle);
-    } catch {
-      setGradeError("Couldn't save the grade. Check your connection and try again.");
-      inFlight.current = false;
-    } finally {
-      setSubmitting(false);
-    }
-  }, [attempt, graded, onGraded, puzzle, review]);
+  const grade = useCallback((g: Grade) => {
+    if (!attempt || graded1.current || !graded) return;
+    graded1.current = true;
+    const opId = crypto.randomUUID();
+    enqueue({
+      kind: "review", opId, puzzleId: puzzle._id, grade: g, reviewedAt: Date.now(), durationMs: attempt.ms,
+      mistakes: attempt.mistakes, hints: attempt.hints, revealed: attempt.revealed, expectedReps: puzzle.card.reps,
+    });
+    onGraded?.(opId, puzzle);
+  }, [attempt, graded, onGraded, puzzle]);
 
   const retry = () => { setFeedback("none"); solver.current?.retry(); };
 
@@ -195,11 +204,11 @@ function Trainer({ puzzle, graded, desiredRetention = 0.9, header, onGraded, onU
       else if (k === "s") solver.current?.reveal();
       else if (k === "r" && done) retry();
       else if (k === "u" && onUndo) onUndo();
-      else if (done && graded && ["1", "2", "3", "4"].includes(k)) void grade(Number(k) as Grade);
+      else if (done && graded && ["1", "2", "3", "4"].includes(k)) grade(Number(k) as Grade);
       else if (done && graded && (k === " " || k === "enter") && suggested) {
         if ((e.target as Element | null)?.closest?.("button, a, select")) return; // let focused controls act
         e.preventDefault();
-        void grade(suggested);
+        grade(suggested);
       }
     };
     window.addEventListener("keydown", on);
@@ -208,34 +217,34 @@ function Trainer({ puzzle, graded, desiredRetention = 0.9, header, onGraded, onU
 
   const game = puzzle.game;
   const prompt = (() => {
-    if (status === "revealed") return { text: "Here's the line.", tone: "text-sage" };
-    if (status === "solved") return feedback === "alt" ? { text: "Checkmate. That works too.", tone: "text-moss" } : { text: attempt && attempt.mistakes > 0 ? "Solved, after a miss." : "Solved.", tone: "text-moss" };
-    if (feedback === "wrong") return { text: "Not that one. Try again.", tone: "text-claret" };
-    if (feedback === "wrong-again") return { text: "Still not it. Take a hint, or look at the solution and come back to it.", tone: "text-claret" };
-    if (feedback === "correct") return { text: "Right. Keep going.", tone: "text-moss" };
-    if (status === "intro") return { text: game ? `Your game vs ${opponentOf(puzzle)}.` : "Watch the move.", tone: "text-sage" };
-    return { text: game ? `Find the move you missed.` : `${sideName(puzzle.solver)} to play.`, tone: "text-bone" };
+    if (status === "revealed") return { text: "Here's the line.", tone: "text-dim" };
+    if (status === "solved") return feedback === "alt" ? { text: "Checkmate. That works too.", tone: "text-good" } : { text: attempt && attempt.mistakes > 0 ? "Solved, after a miss." : "Solved.", tone: "text-good" };
+    if (feedback === "wrong") return { text: "Not that one. Try again.", tone: "text-blunder" };
+    if (feedback === "wrong-again") return { text: "Still not it. Take a hint, or look at the solution and come back to it.", tone: "text-blunder" };
+    if (feedback === "correct") return { text: "Right. Keep going.", tone: "text-good" };
+    if (status === "intro") return { text: game ? `Your game vs ${opponentOf(puzzle)}.` : "Watch the move.", tone: "text-dim" };
+    return { text: game ? `Find the move you missed.` : `${sideName(puzzle.solver)} to play.`, tone: "text-boxwood" };
   })();
 
   const details = done && (
-    <div className="panel pop p-5 text-sm leading-relaxed">
-      <p className="figurine text-[0.95rem] text-bone">
+    <div className="pop border-t border-line px-1 pt-4 text-sm leading-relaxed md:border-0 md:pt-0">
+      <p className="figurine prose-serif text-boxwood">
         {formatLine(puzzle.fen, san.map(figurine))}
       </p>
       {game && (
-        <div className="mt-4 space-y-1.5 text-sage">
+        <div className="prose-serif mt-3 space-y-2 text-dim">
           <p>
-            In the game you played <b className="figurine font-semibold text-claret">{figurine(game.playedSan)}</b> ({formatEval(game.evalPlayed)}).
-            The only good move was <b className="figurine font-semibold text-moss">{figurine(game.bestSan)}</b> ({formatEval(game.evalBest, game.mate)}).
+            In the game you played <span className="figurine mv-bad">{figurine(game.playedSan)}</span> ({formatEval(game.evalPlayed)}) and
+            the only good move was <span className="figurine mv-good">{figurine(game.bestSan)}</span> ({formatEval(game.evalBest, game.mate)}).
           </p>
-          <p>{[`${game.white} vs ${game.black}`, game.timeClass, game.playedAt ? new Date(game.playedAt).toLocaleDateString() : ""].filter(Boolean).join(" · ")}</p>
+          <p>{[`${game.white} vs ${game.black}`, game.timeClass, game.playedAt ? new Date(game.playedAt).toLocaleDateString() : ""].filter(Boolean).join(", ")}</p>
         </div>
       )}
-      {puzzle.notes && <p className="mt-3 whitespace-pre-wrap text-sage">{puzzle.notes}</p>}
+      {puzzle.notes && <p className="prose-serif mt-3 whitespace-pre-wrap italic text-dim">{puzzle.notes}</p>}
       <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
-        {game?.url && <a className="inline-flex items-center gap-1 text-brass hover:underline" href={game.url} target="_blank" rel="noreferrer">Open game <ExternalLink size={13} /></a>}
-        <a className="inline-flex items-center gap-1 text-brass hover:underline" href={`https://lichess.org/analysis/${puzzle.fen.replace(/ /g, "_")}?color=${puzzle.solver === "w" ? "white" : "black"}`} target="_blank" rel="noreferrer">Analyse on Lichess <ExternalLink size={13} /></a>
-        <a className="text-sage hover:text-bone hover:underline" href={`#/puzzle/${puzzle._id}`}>Edit notes</a>
+        {game?.url && <a className="link inline-flex items-center gap-1" href={game.url} target="_blank" rel="noreferrer">Open game <ExternalLink size={13} /></a>}
+        <a className="link inline-flex items-center gap-1" href={`https://lichess.org/analysis/${puzzle.fen.replace(/ /g, "_")}?color=${puzzle.solver === "w" ? "white" : "black"}`} target="_blank" rel="noreferrer">Analyse on Lichess <ExternalLink size={13} /></a>
+        <a className="text-dim underline-offset-[3px] hover:text-boxwood hover:underline" href={`#/puzzle/${puzzle._id}`}>Edit notes</a>
       </div>
     </div>
   );
@@ -257,13 +266,13 @@ function Trainer({ puzzle, graded, desiredRetention = 0.9, header, onGraded, onU
 
           <div className="panel flex min-h-[14rem] flex-col p-4 md:block md:min-h-0 md:p-5">
             <div className="flex items-center gap-3">
-              <span className={`h-4 w-4 shrink-0 rounded-full border ${puzzle.solver === "w" ? "border-bone bg-bone" : "border-sage bg-black"}`} aria-hidden />
-              <p className={`font-serif text-lg leading-snug md:text-xl ${prompt.tone}`} aria-live="polite">{prompt.text}</p>
+              <span className={`h-3.5 w-3.5 shrink-0 rounded-[3px] border ${puzzle.solver === "w" ? "border-boxwood bg-boxwood" : "border-dim bg-ebony"}`} aria-hidden />
+              <p className={`font-serif text-[1.3rem] leading-snug md:text-[1.45rem] ${prompt.tone}`} aria-live="polite">{prompt.text}</p>
             </div>
             {!done && userMoveIdx.length > 1 && (
-              <p className="mt-1 text-sm text-sage md:mt-2">{sideName(puzzle.solver)} to play · move {Math.min(userStep, userMoveIdx.length)} of {userMoveIdx.length}</p>
+              <p className="mt-1 text-sm text-dim md:mt-2">{sideName(puzzle.solver)} to play, move {Math.min(userStep, userMoveIdx.length)} of {userMoveIdx.length}</p>
             )}
-            {!done && userMoveIdx.length === 1 && status !== "intro" && <p className="mt-1 text-sm text-sage md:mt-2">{sideName(puzzle.solver)} to play</p>}
+            {!done && userMoveIdx.length === 1 && status !== "intro" && <p className="mt-1 text-sm text-dim md:mt-2">{sideName(puzzle.solver)} to play</p>}
 
             {!done && (
               <div className="mt-auto flex gap-2 pt-3 md:mt-5 md:pt-0">
@@ -276,15 +285,14 @@ function Trainer({ puzzle, graded, desiredRetention = 0.9, header, onGraded, onU
               <div className="pop mt-3 md:mt-5">
                 <div className="grid grid-cols-4 gap-2">
                   {([1, 2, 3, 4] as Grade[]).map((g) => (
-                    <button key={g} disabled={submitting} onClick={() => void grade(g)}
-                      className={`flex flex-col items-center rounded-xl px-1 py-2.5 transition-colors ${g === suggested ? "bg-brass text-[#1c1606] hover:bg-brass-2" : "bg-felt-3/60 text-bone hover:bg-felt-3"}`}>
+                    <button key={g} onClick={() => grade(g)}
+                      className={`flex flex-col items-center rounded-md px-1 py-2.5 transition-colors ${g === suggested ? "bg-boxwood text-ebony hover:bg-boxwood-2" : "bg-ebony-3 text-boxwood hover:bg-line"}`}>
                       <span className="text-sm font-semibold">{GRADE_NAMES[g]}</span>
-                      <span className={`text-xs ${g === suggested ? "opacity-75" : "text-sage"}`}>{formatInterval(previews[g] - Date.now())}</span>
+                      <span className={`text-xs ${g === suggested ? "opacity-75" : "text-dim"}`}>{formatInterval(previews[g] - Date.now())}</span>
                     </button>
                   ))}
                 </div>
-                {gradeError && <p className="mt-2 text-sm text-claret" role="alert">{gradeError}</p>}
-                <p className="mt-2.5 text-xs text-sage">{gradeReason(attempt!)} <span className="hidden md:inline">Space accepts, 1–4 to choose.</span></p>
+                <p className="mt-2.5 text-xs text-dim">{gradeReason(attempt!)} <span className="hidden md:inline">Space accepts, 1–4 to choose.</span></p>
               </div>
             )}
             {done && (
@@ -307,9 +315,9 @@ function SolveTime({ ms, last }: { ms: number; last: number | null }) {
   const s = (x: number) => (x < 10_000 ? (x / 1000).toFixed(1) : Math.round(x / 1000)) + " s";
   const faster = last !== null && ms < last;
   return (
-    <p className="text-sm text-sage">
-      Solved in <span className="font-semibold text-bone tabular-nums">{s(ms)}</span>
-      {last !== null && <> · <span className={faster ? "text-moss" : ""}>{s(last)} last time</span></>}
+    <p className="text-sm text-dim">
+      Solved in <span className="font-semibold text-boxwood tabular-nums">{s(ms)}</span>
+      {last !== null && <>, <span className={faster ? "text-good" : ""}>{s(last)} last time</span></>}
     </p>
   );
 }

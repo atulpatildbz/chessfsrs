@@ -55,6 +55,18 @@ Live: https://atulpatildbz.github.io/chessfsrs
   top, and each one links to those puzzles in the Library), where in your games the missed moves
   happen (phase, clock), and the puzzles you keep forgetting. After a clean solve, Practice shows
   your time next to the last clean solve.
+- **Offline**: practice works with no connection, in the browser, the installed PWA and the Android
+  app, and grades reach the server by themselves when the connection is back. The device keeps a
+  copy of the library in IndexedDB (`src/lib/local/`): `sync.pull({since})` is a live query that
+  returns only the puzzles changed since the device's cursor (every puzzle write sets `updatedAt`;
+  deletions leave a `tombstones` row), so a grade on one device reaches the others as a single row.
+  Grades go into an outbox and are sent in order (`practice.review` with a client-made `opId`, so a
+  resend after a reload is applied once, scheduled from when the grade was given). Until the
+  server's version of the card arrives, the outbox is laid over the local copy (`lib/offline.ts`), and
+  the practice queue is built on the device with the server's old rules. Home's streak, heatmap and
+  Patterns show the last copy while offline. Editing puzzles, adding them, scanning games and
+  changing settings need a connection. A service worker (vite-plugin-pwa) caches the web app; fonts
+  are bundled, so nothing loads from Google.
 - **Manual puzzles**: paste one or more PGNs with a `[FEN]` header and the solution line. The side
   that plays the last move is the solver (`1... Kg7 2. Nd5 Rh8 3. Bxf6+ Qxf6 4. Nxf6` from a
   black-to-move FEN → you play White and Kg7 is played for you); a Switch button flips it. A bare
@@ -117,7 +129,7 @@ depends on the server. Google refuses sign-in inside a WebView, so the app opens
 - Get an APK: Actions → **Android APK** → Run workflow, then download `chessfsrs-apk`. Install it
   on the phone (allow installs from unknown sources). It's debug-signed: fine for personal use.
 - Locally (needs Android Studio / SDK): `npm run cap:android && npx cap open android`.
-- Until then, Chrome on Android can install the web app from the menu (it has a manifest).
+- Chrome on Android can also install the web app from the menu; it works offline once opened.
 
 ## Developing
 
@@ -130,6 +142,9 @@ depends on the server. Google refuses sign-in inside a WebView, so the app opens
     TEST_EMAIL=test@chessfsrs.local TEST_PASSWORD=… node tests/e2e/smoke.mjs out/   # needs dev server
     TEST_PASSWORD=… node tests/e2e/mobile.mjs out/                # Pixel 7, touch input
     BROWSER=webkit TEST_PASSWORD=… node tests/e2e/mobile.mjs out/ # iPhone 13 (Safari engine)
+    # offline practice, on a production build (the service worker only runs there):
+    VITE_TEST_LOGIN=1 npx vite build --outDir dist-test && npx vite preview --outDir dist-test --port 4173 &
+    TEST_PASSWORD=… node tests/e2e/offline.mjs out/
     npm run mine chesscom <username> 10 normal                    # mining in Node
 
 Layout: `lib/` is shared by the app and Convex (puzzle model, FSRS, mining, game fetching, UCI
@@ -138,5 +153,4 @@ interactive board).
 
 ## Not yet
 
-- Offline practice (Convex keeps no offline cache; the app needs a connection).
 - Fitting FSRS parameters to your own review log (the log is already recorded).
